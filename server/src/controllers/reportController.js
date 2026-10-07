@@ -307,9 +307,10 @@ async function exportInspectionPDF(req, res) {
       // Single line text: vertically centered between upper line (y) and lower line (y + h)
       let textY = y;
       if (baseline === 'middle') {
-        textY = y + Math.max(0, (h - size) / 2) - 0.5;
+        const offset = h < 8 ? 0.2 : 0.5;
+        textY = y + Math.max(0, (h - size) / 2) - offset;
       } else if (baseline === 'top') {
-        textY = y + 1.5;
+        textY = y + 1.2;
       }
       doc.text(str, x, textY, {
         width: w,
@@ -320,13 +321,26 @@ async function exportInspectionPDF(req, res) {
     }
 
     // ==========================================
+    // ADAPTIVE LAYOUT ENGINE FOR DEFECTS & SECTIONS
+    // ==========================================
+    const numDefects = defectFindings.length;
+
+    // Baseline: defects table lines should be at least 10 in report (filled with data, or empty rows).
+    // If defect list increases from 10 to 50+, the system dynamically analyzes the count
+    // and adaptively compresses section heights and font sizes across the whole report.
+    const comp = numDefects <= 10 ? 0 : Math.min(1.0, (numDefects - 10) / 40);
+    const lerp = (minVal, maxVal) => maxVal - ((maxVal - minVal) * comp);
+
+    curY = lerp(8, 12);
+
+    // ==========================================
     // SECTION 1: TOP HEADER "INSPECTION REPORT"
     // ==========================================
-    const titleHeight = 26;
+    const titleHeight = lerp(18, 26);
     drawBox(leftX, curY, tableWidth, titleHeight, COLOR_TITLE_BG, true);
     drawText('INSPECTION REPORT', leftX, curY, tableWidth, titleHeight, {
       bold: true,
-      size: 11.5,
+      size: lerp(9.5, 11.5),
       color: '#0F172A',
       align: 'center',
       baseline: 'middle'
@@ -336,13 +350,13 @@ async function exportInspectionPDF(req, res) {
     // ==========================================
     // SECTION 2: DISPOSITION & AUDITED BY / DATE
     // ==========================================
-    const row1Height = 34;
+    const row1Height = lerp(22, 34);
     const dispWidth = 320;
     const auditWidth = tableWidth - dispWidth;
 
     // Left: Disposition Box
     drawBox(leftX, curY, dispWidth, row1Height, '#FFFFFF', true);
-    drawText('Disposition', leftX + 5, curY + 2, 100, 10, { bold: true, size: 7.5 });
+    drawText('Disposition', leftX + 5, curY + lerp(1, 2), 100, lerp(7, 10), { bold: true, size: lerp(6.5, 7.5) });
 
     const currentDisp = (ins.disposition || 'Accepted').toLowerCase();
     const isAccepted = currentDisp.includes('accept') && !currentDisp.includes('rework');
@@ -350,10 +364,14 @@ async function exportInspectionPDF(req, res) {
     const isAcceptRework = currentDisp.includes('rework') && currentDisp.includes('accept');
     const isRework = (currentDisp.includes('rework') && !currentDisp.includes('accept')) || currentDisp.includes('hold');
 
-    drawText(`${isAccepted ? '[X]' : '[  ]'} Accepted`, leftX + 10, curY + 12, 130, 10, { bold: isAccepted, size: 7, baseline: 'middle' });
-    drawText(`${isRejected ? '[X]' : '[  ]'} Rejected`, leftX + 155, curY + 12, 130, 10, { bold: isRejected, size: 7, baseline: 'middle' });
-    drawText(`${isAcceptRework ? '[X]' : '[  ]'} Accepted After Rework`, leftX + 10, curY + 22, 140, 10, { bold: isAcceptRework, size: 7, baseline: 'middle' });
-    drawText(`${isRework ? '[X]' : '[  ]'} Rework`, leftX + 155, curY + 22, 130, 10, { bold: isRework, size: 7, baseline: 'middle' });
+    const dispLine1Y = curY + lerp(7.5, 12);
+    const dispLine2Y = curY + lerp(14, 22);
+    const dispFont = lerp(5.8, 7.0);
+
+    drawText(`${isAccepted ? '[X]' : '[  ]'} Accepted`, leftX + 10, dispLine1Y, 130, lerp(6.5, 10), { bold: isAccepted, size: dispFont, baseline: 'middle' });
+    drawText(`${isRejected ? '[X]' : '[  ]'} Rejected`, leftX + 155, dispLine1Y, 130, lerp(6.5, 10), { bold: isRejected, size: dispFont, baseline: 'middle' });
+    drawText(`${isAcceptRework ? '[X]' : '[  ]'} Accepted After Rework`, leftX + 10, dispLine2Y, 140, lerp(6.5, 10), { bold: isAcceptRework, size: dispFont, baseline: 'middle' });
+    drawText(`${isRework ? '[X]' : '[  ]'} Rework`, leftX + 155, dispLine2Y, 130, lerp(6.5, 10), { bold: isRework, size: dispFont, baseline: 'middle' });
 
     // Right: Audited By / Date Box
     const auditX = leftX + dispWidth;
@@ -361,7 +379,7 @@ async function exportInspectionPDF(req, res) {
     drawBox(auditX, curY, auditSubHeaderW, row1Height, COLOR_HEADER_DIM, true);
     drawText('Audited By / Date:', auditX + 2, curY, auditSubHeaderW - 4, row1Height, {
       bold: true,
-      size: 7.5,
+      size: lerp(6.5, 7.5),
       color: '#FFFFFF',
       align: 'center',
       baseline: 'middle'
@@ -370,20 +388,23 @@ async function exportInspectionPDF(req, res) {
     drawBox(auditX + auditSubHeaderW, curY, auditWidth - auditSubHeaderW, row1Height, '#FFFFFF', true);
     const inspectorName = genInfo.inspector_name || ins.assigned_employee_name || 'Kashif Mahmood';
     const insDate = formatDate(genInfo.inspection_date || ins.created_at);
-    drawText(`NAME:-  ${inspectorName},`, auditX + auditSubHeaderW + 6, curY + 2, auditWidth - auditSubHeaderW - 12, 15, { bold: true, size: 7.5, baseline: 'middle' });
-    drawText(`DATED:-   ${insDate}`, auditX + auditSubHeaderW + 6, curY + 17, auditWidth - auditSubHeaderW - 12, 15, { bold: true, size: 7.5, baseline: 'middle' });
+    const auditFont = lerp(6.2, 7.5);
+    const auditHalfH = row1Height / 2;
+    drawText(`NAME:-  ${inspectorName},`, auditX + auditSubHeaderW + 6, curY, auditWidth - auditSubHeaderW - 12, auditHalfH, { bold: true, size: auditFont, baseline: 'middle' });
+    drawText(`DATED:-   ${insDate}`, auditX + auditSubHeaderW + 6, curY + auditHalfH, auditWidth - auditSubHeaderW - 12, auditHalfH, { bold: true, size: auditFont, baseline: 'middle' });
     curY += row1Height;
 
     // ==========================================
     // SECTION 3: LAB REPORT & FINISHED GOODS STATUS
     // ==========================================
-    const row2Height = 18;
+    const row2Height = lerp(12, 18);
+    const sec3Font = lerp(5.8, 7.0);
     drawBox(leftX, curY, dispWidth, row2Height, '#FFFFFF', true);
-    drawText('Lab report perform date', leftX + 5, curY, 110, row2Height, { bold: true, size: 7, baseline: 'middle' });
-    drawText('[  ] Accept      [  ] Reject      [X] No report', leftX + 118, curY, dispWidth - 122, row2Height, { size: 7, baseline: 'middle' });
+    drawText('Lab report perform date', leftX + 5, curY, 110, row2Height, { bold: true, size: sec3Font, baseline: 'middle' });
+    drawText('[  ] Accept      [  ] Reject      [X] No report', leftX + 118, curY, dispWidth - 122, row2Height, { size: sec3Font, baseline: 'middle' });
 
     drawBox(auditX, curY, auditWidth, row2Height, '#FFFFFF', true);
-    drawText('[X] Finished Goods             [  ] In Process', auditX + 14, curY, auditWidth - 20, row2Height, { bold: true, size: 7, baseline: 'middle' });
+    drawText('[X] Finished Goods             [  ] In Process', auditX + 14, curY, auditWidth - 20, row2Height, { bold: true, size: sec3Font, baseline: 'middle' });
     curY += row2Height;
 
     // ==========================================
@@ -393,18 +414,20 @@ async function exportInspectionPDF(req, res) {
     const infoCol2W = 165;
     const infoCol3W = tableWidth - infoCol1W - infoCol2W;
 
-    const infoHeaderH = 15;
+    const infoHeaderH = lerp(10.0, 15.0);
+    const infoHdrFont = lerp(5.5, 7.0);
     drawBox(leftX, curY, infoCol1W, infoHeaderH, COLOR_HEADER_GRAY, true);
-    drawText('General Information', leftX + 5, curY, infoCol1W - 10, infoHeaderH, { bold: true, size: 7, baseline: 'middle' });
+    drawText('General Information', leftX + 5, curY, infoCol1W - 10, infoHeaderH, { bold: true, size: infoHdrFont, baseline: 'middle' });
 
     drawBox(leftX + infoCol1W, curY, infoCol2W, infoHeaderH, COLOR_HEADER_GRAY, true);
-    drawText('P.O Information', leftX + infoCol1W + 5, curY, infoCol2W - 10, infoHeaderH, { bold: true, size: 7, baseline: 'middle' });
+    drawText('P.O Information', leftX + infoCol1W + 5, curY, infoCol2W - 10, infoHeaderH, { bold: true, size: infoHdrFont, baseline: 'middle' });
 
     drawBox(leftX + infoCol1W + infoCol2W, curY, infoCol3W, infoHeaderH, COLOR_HEADER_GRAY, true);
-    drawText('Sampling plans', leftX + infoCol1W + infoCol2W + 5, curY, infoCol3W - 10, infoHeaderH, { bold: true, size: 7, baseline: 'middle' });
+    drawText('Sampling plans', leftX + infoCol1W + infoCol2W + 5, curY, infoCol3W - 10, infoHeaderH, { bold: true, size: infoHdrFont, baseline: 'middle' });
     curY += infoHeaderH;
 
-    const rowH = 14.2;
+    const rowH = lerp(9.2, 14.2);
+    const infoDataFont = lerp(5.2, 6.5);
     const generalRows = [
       {
         c1Label: 'Vendor name:',
@@ -443,20 +466,20 @@ async function exportInspectionPDF(req, res) {
     generalRows.forEach(gr => {
       // Col 1
       drawBox(leftX, curY, infoCol1W, rowH, '#FFFFFF', true);
-      drawText(gr.c1Label, leftX + 4, curY, 78, rowH, { bold: true, size: 6.5, baseline: 'middle' });
-      drawText(gr.c1Val, leftX + 82, curY, infoCol1W - 86, rowH, { size: 6.5, baseline: 'middle' });
+      drawText(gr.c1Label, leftX + 4, curY, 78, rowH, { bold: true, size: infoDataFont, baseline: 'middle' });
+      drawText(gr.c1Val, leftX + 82, curY, infoCol1W - 86, rowH, { size: infoDataFont, baseline: 'middle' });
 
       // Col 2
       const c2X = leftX + infoCol1W;
       drawBox(c2X, curY, infoCol2W, rowH, '#FFFFFF', true);
-      drawText(gr.c2Label, c2X + 4, curY, 110, rowH, { bold: true, size: 6.5, baseline: 'middle' });
-      drawText(gr.c2Val, c2X + 115, curY, infoCol2W - 119, rowH, { size: 6.5, baseline: 'middle' });
+      drawText(gr.c2Label, c2X + 4, curY, 110, rowH, { bold: true, size: infoDataFont, baseline: 'middle' });
+      drawText(gr.c2Val, c2X + 115, curY, infoCol2W - 119, rowH, { size: infoDataFont, baseline: 'middle' });
 
       // Col 3
       const c3X = c2X + infoCol2W;
       drawBox(c3X, curY, infoCol3W, rowH, '#FFFFFF', true);
-      drawText(gr.c3Label, c3X + 4, curY, 155, rowH, { bold: true, size: 6.5, baseline: 'middle' });
-      drawText(gr.c3Val, c3X + 155, curY, infoCol3W - 159, rowH, { bold: true, size: 6.5, align: 'right', baseline: 'middle' });
+      drawText(gr.c3Label, c3X + 4, curY, 155, rowH, { bold: true, size: infoDataFont, baseline: 'middle' });
+      drawText(gr.c3Val, c3X + 155, curY, infoCol3W - 159, rowH, { bold: true, size: infoDataFont, align: 'right', baseline: 'middle' });
 
       curY += rowH;
     });
@@ -464,12 +487,12 @@ async function exportInspectionPDF(req, res) {
     // ==========================================
     // SECTION 5: NOTICE BAR "Defected picture is attached for you reference"
     // ==========================================
-    const noticeH = 13.5;
+    const noticeH = lerp(8.5, 13.5);
     drawBox(leftX, curY, tableWidth, noticeH, '#FFFFFF', true);
     drawText('Defected picture is attached for you reference', leftX + 5, curY, tableWidth - 10, noticeH, {
       bold: true,
       font: 'Helvetica-BoldOblique',
-      size: 6.5,
+      size: lerp(5.2, 6.5),
       baseline: 'middle'
     });
     curY += noticeH;
@@ -491,20 +514,23 @@ async function exportInspectionPDF(req, res) {
       'OTHERS'
     ];
 
-    const masterHeaderH = 12.5;
+    const masterHeaderH = lerp(9.0, 12.5);
+    const masterHdrFont = lerp(4.8, 5.5);
     for (let c = 0; c < numCols; c++) {
       const cgX = leftX + (c * colGroupW);
       drawBox(cgX, curY, codeW, masterHeaderH, COLOR_HEADER_DARK, true);
-      drawText('CODE', cgX, curY, codeW, masterHeaderH, { bold: true, size: 5.5, color: '#FFFFFF', align: 'center', baseline: 'middle' });
+      drawText('CODE', cgX, curY, codeW, masterHeaderH, { bold: true, size: masterHdrFont, color: '#FFFFFF', align: 'center', baseline: 'middle' });
 
       drawBox(cgX + codeW, curY, descW, masterHeaderH, COLOR_HEADER_DARK, true);
-      drawText(colHeaders[c], cgX + codeW + 2, curY, descW - 4, masterHeaderH, { bold: true, size: 5.5, color: '#FFFFFF', align: 'center', baseline: 'middle' });
+      drawText(colHeaders[c], cgX + codeW + 2, curY, descW - 4, masterHeaderH, { bold: true, size: masterHdrFont, color: '#FFFFFF', align: 'center', baseline: 'middle' });
     }
     curY += masterHeaderH;
 
     // Organize into 5 columns of 11 rows = 55 codes matching master defect reference
     const totalMasterRows = 11;
-    const masterGridRowH = 10.2;
+    const masterGridRowH = lerp(7.0, 10.2);
+    const masterCodeFont = lerp(4.8, 5.5);
+    const masterDescFont = lerp(4.5, 5.2);
 
     const col1 = catalogRows.slice(0, 11);
     const col2 = catalogRows.slice(11, 22);
@@ -523,7 +549,7 @@ async function exportInspectionPDF(req, res) {
         if (item && isItemActive) {
           drawText(String(item.code || ''), cgX, curY, codeW, masterGridRowH, {
             bold: true,
-            size: 5.5,
+            size: masterCodeFont,
             align: 'center',
             baseline: 'middle'
           });
@@ -532,7 +558,7 @@ async function exportInspectionPDF(req, res) {
         drawBox(cgX + codeW, curY, descW, masterGridRowH, '#FFFFFF', true);
         if (item && isItemActive) {
           drawText(item.name || '', cgX + codeW + 3, curY, descW - 6, masterGridRowH, {
-            size: 5.2,
+            size: masterDescFont,
             baseline: 'middle'
           });
         }
@@ -545,7 +571,8 @@ async function exportInspectionPDF(req, res) {
     // Columns: Code | FAULTS AND DEFECTS FOUND | MINOR | MAJOR | CRITICAL | MIN % | MAJ % | CRI % | Remarks
     // Displays user inputs entered during inspection (e.g. "Dust")
     // ==========================================
-    const faultsHeaderH = 14.5;
+    const faultsHeaderH = lerp(10.5, 14.5);
+    const faultsHdrFont = lerp(5.0, 6.0);
     const fColCode = 26;
     const fColName = 205;
     const fColMin = 44;
@@ -573,7 +600,7 @@ async function exportInspectionPDF(req, res) {
       drawBox(currentFaultX, curY, fc.w, faultsHeaderH, COLOR_FAULT_HEADER, true);
       drawText(fc.name, currentFaultX, curY, fc.w, faultsHeaderH, {
         bold: true,
-        size: 6,
+        size: faultsHdrFont,
         color: '#000000',
         align: 'center',
         baseline: 'middle'
@@ -582,16 +609,49 @@ async function exportInspectionPDF(req, res) {
     });
     curY += faultsHeaderH;
 
+    // Remaining height calculation for Section 7:
+    const totalRowH = lerp(10.0, 14.0);
+    const notice2H = lerp(8.5, 13.5);
+    const dimHeaderH = lerp(9.0, 13.0);
+    const dimSubH = lerp(8.0, 12.0);
+    const dimRowH = lerp(6.2, 9.8);
+    const dimDefectsH = lerp(8.0, 12.0);
+    const aqlHdrH = lerp(8.5, 12.5);
+    const aqlSubH = lerp(7.5, 11.0);
+    const aqlRowH = lerp(6.5, 10.0);
+    const remarksH = lerp(13.0, 24.0);
+    const sigSpacerH = lerp(2.0, 6.0);
+    const sigH = lerp(18.0, 34.0);
+
+    const nonFaultBelowSection7 = totalRowH + notice2H + dimHeaderH + (dimSubH * 2) + 
+      (dimRowH * 16) + dimDefectsH + aqlHdrH + aqlSubH + (aqlRowH * 5) + 
+      remarksH + sigSpacerH + sigH;
+
+    const targetPageBottom = 828.0;
+    const availableForFaultRows = targetPageBottom - curY - nonFaultBelowSection7;
+
+    const minReadableFaultRowH = 6.4;
+    const maxPage1FaultRows = Math.floor(availableForFaultRows / minReadableFaultRowH);
+
+    // Base requirement: always at least 10 rows in report. If defects > 10, display up to maxPage1FaultRows
+    const page1FaultCount = numDefects <= 10 
+      ? 10 
+      : Math.min(numDefects, maxPage1FaultRows);
+
+    const faultRowH = availableForFaultRows / page1FaultCount;
+    const faultFont = Math.max(4.5, Math.min(6.5, faultRowH * 0.52));
+    const faultCodeFont = Math.max(4.6, Math.min(6.5, faultRowH * 0.54));
+    const faultNumFont = Math.max(4.6, Math.min(7.0, faultRowH * 0.55));
+    const faultPctFont = Math.max(4.3, Math.min(6.0, faultRowH * 0.48));
+    const faultRemarksFont = Math.max(4.2, Math.min(6.0, faultRowH * 0.48));
+
     const sampleDenominator = parseInt(samplingPlan.visual_sample_size_aql_4 || samplingPlan.sample_size || 80, 10) || 80;
 
     let totalMinor = 0;
     let totalMajor = 0;
     let totalCritical = 0;
 
-    const totalDisplayRows = Math.max(defectFindings.length, 9);
-    const faultRowH = totalDisplayRows <= 9 ? 14.2 : (128 / totalDisplayRows);
-
-    for (let i = 0; i < totalDisplayRows; i++) {
+    for (let i = 0; i < page1FaultCount; i++) {
       const df = defectFindings[i] || null;
       let fx = leftX;
 
@@ -603,9 +663,9 @@ async function exportInspectionPDF(req, res) {
       totalMajor += maj;
       totalCritical += c;
 
-      const mPct = df ? ((m / sampleDenominator) * 100).toFixed(2) + '%' : (i < defectFindings.length ? '0.00%' : '');
-      const majPct = df ? ((maj / sampleDenominator) * 100).toFixed(2) + '%' : (i < defectFindings.length ? '0.00%' : '');
-      const cPct = df ? ((c / sampleDenominator) * 100).toFixed(2) + '%' : (i < defectFindings.length ? '0.00%' : '');
+      const mPct = df ? ((m / sampleDenominator) * 100).toFixed(2) + '%' : '';
+      const majPct = df ? ((maj / sampleDenominator) * 100).toFixed(2) + '%' : '';
+      const cPct = df ? ((c / sampleDenominator) * 100).toFixed(2) + '%' : '';
 
       let codeNum = df ? (df.defect_code || df.code || (df.defect_id ? String(df.defect_id) : '')) : '';
 
@@ -626,127 +686,145 @@ async function exportInspectionPDF(req, res) {
       // Code
       drawBox(fx, curY, fColCode, faultRowH, '#FFFFFF', true);
       if (codeNum) {
-        drawText(String(codeNum), fx, curY, fColCode, faultRowH, { bold: true, size: 6.5, align: 'center', baseline: 'middle' });
+        drawText(String(codeNum), fx, curY, fColCode, faultRowH, { bold: true, size: faultCodeFont, align: 'center', baseline: 'middle' });
       }
       fx += fColCode;
 
       // Defect Name (User input)
       drawBox(fx, curY, fColName, faultRowH, '#FFFFFF', true);
       if (defectName) {
-        drawText(defectName, fx + 4, curY, fColName - 8, faultRowH, { bold: true, size: 6.5, align: 'center', baseline: 'middle' });
+        drawText(defectName, fx + 4, curY, fColName - 8, faultRowH, { bold: true, size: faultFont, align: 'center', baseline: 'middle' });
       }
       fx += fColName;
 
       // MINOR (soft green cell if > 0)
       drawBox(fx, curY, fColMin, faultRowH, m > 0 ? COLOR_CELL_GREEN : '#FFFFFF', true);
       if (m > 0) {
-        drawText(String(m), fx, curY, fColMin, faultRowH, { bold: true, size: 7, color: '#006100', align: 'center', baseline: 'middle' });
+        drawText(String(m), fx, curY, fColMin, faultRowH, { bold: true, size: faultNumFont, color: '#006100', align: 'center', baseline: 'middle' });
       }
       fx += fColMin;
 
       // MAJOR (soft orange cell if > 0)
       drawBox(fx, curY, fColMaj, faultRowH, maj > 0 ? COLOR_CELL_ORANGE : '#FFFFFF', true);
       if (maj > 0) {
-        drawText(String(maj), fx, curY, fColMaj, faultRowH, { bold: true, size: 7, color: '#9C6500', align: 'center', baseline: 'middle' });
+        drawText(String(maj), fx, curY, fColMaj, faultRowH, { bold: true, size: faultNumFont, color: '#9C6500', align: 'center', baseline: 'middle' });
       }
       fx += fColMaj;
 
       // CRITICAL (soft red cell if > 0)
       drawBox(fx, curY, fColCri, faultRowH, c > 0 ? COLOR_CELL_RED : '#FFFFFF', true);
       if (c > 0) {
-        drawText(String(c), fx, curY, fColCri, faultRowH, { bold: true, size: 7, color: '#9C0006', align: 'center', baseline: 'middle' });
+        drawText(String(c), fx, curY, fColCri, faultRowH, { bold: true, size: faultNumFont, color: '#9C0006', align: 'center', baseline: 'middle' });
       }
       fx += fColCri;
 
       // MIN %
       drawBox(fx, curY, fColMinPct, faultRowH, '#FFFFFF', true);
       if (mPct) {
-        drawText(mPct, fx, curY, fColMinPct, faultRowH, { size: 6, align: 'center', baseline: 'middle' });
+        drawText(mPct, fx, curY, fColMinPct, faultRowH, { size: faultPctFont, align: 'center', baseline: 'middle' });
       }
       fx += fColMinPct;
 
       // MAJ %
       drawBox(fx, curY, fColMajPct, faultRowH, '#FFFFFF', true);
       if (majPct) {
-        drawText(majPct, fx, curY, fColMajPct, faultRowH, { size: 6, align: 'center', baseline: 'middle' });
+        drawText(majPct, fx, curY, fColMajPct, faultRowH, { size: faultPctFont, align: 'center', baseline: 'middle' });
       }
       fx += fColMajPct;
 
       // CRI %
       drawBox(fx, curY, fColCriPct, faultRowH, '#FFFFFF', true);
       if (cPct) {
-        drawText(cPct, fx, curY, fColCriPct, faultRowH, { size: 6, align: 'center', baseline: 'middle' });
+        drawText(cPct, fx, curY, fColCriPct, faultRowH, { size: faultPctFont, align: 'center', baseline: 'middle' });
       }
       fx += fColCriPct;
 
       // Remarks
       drawBox(fx, curY, fColRemarks, faultRowH, '#FFFFFF', true);
       if (df && df.remarks && df.remarks !== defectName) {
-        drawText(df.remarks, fx + 4, curY, fColRemarks - 8, faultRowH, { size: 6, baseline: 'middle' });
+        drawText(df.remarks, fx + 4, curY, fColRemarks - 8, faultRowH, { size: faultRemarksFont, baseline: 'middle' });
       }
       fx += fColRemarks;
 
       curY += faultRowH;
     }
 
+    // Accumulate overflow defects into total
+    if (numDefects > page1FaultCount) {
+      for (let i = page1FaultCount; i < numDefects; i++) {
+        const df = defectFindings[i];
+        if (df) {
+          totalMinor += (parseInt(df.minor_count || 0, 10) || 0);
+          totalMajor += (parseInt(df.major_count || 0, 10) || 0);
+          totalCritical += (parseInt(df.critical_count || 0, 10) || 0);
+        }
+      }
+    }
+
     // TOTAL Row
-    const totalRowH = 14;
     let fx = leftX;
     const totalLabelW = fColCode + fColName;
+    const totFont = lerp(5.5, 7.0);
+    const totNumFont = lerp(6.0, 7.5);
+    const totPctFont = lerp(5.0, 6.0);
+
     drawBox(fx, curY, totalLabelW, totalRowH, '#FFFFFF', true);
-    drawText('TOTAL', fx, curY, totalLabelW, totalRowH, { bold: true, size: 7, align: 'center', baseline: 'middle' });
+    drawText(numDefects > page1FaultCount ? 'PAGE 1 TOTAL' : 'TOTAL', fx, curY, totalLabelW, totalRowH, { bold: true, size: totFont, align: 'center', baseline: 'middle' });
     fx += totalLabelW;
 
     drawBox(fx, curY, fColMin, totalRowH, COLOR_TOTAL_BLUE, true);
-    drawText(String(totalMinor), fx, curY, fColMin, totalRowH, { bold: true, size: 7.5, align: 'center', baseline: 'middle' });
+    drawText(String(totalMinor), fx, curY, fColMin, totalRowH, { bold: true, size: totNumFont, align: 'center', baseline: 'middle' });
     fx += fColMin;
 
     drawBox(fx, curY, fColMaj, totalRowH, COLOR_TOTAL_BLUE, true);
-    drawText(String(totalMajor), fx, curY, fColMaj, totalRowH, { bold: true, size: 7.5, align: 'center', baseline: 'middle' });
+    drawText(String(totalMajor), fx, curY, fColMaj, totalRowH, { bold: true, size: totNumFont, align: 'center', baseline: 'middle' });
     fx += fColMaj;
 
     drawBox(fx, curY, fColCri, totalRowH, COLOR_TOTAL_BLUE, true);
-    drawText(String(totalCritical), fx, curY, fColCri, totalRowH, { bold: true, size: 7.5, align: 'center', baseline: 'middle' });
+    drawText(String(totalCritical), fx, curY, fColCri, totalRowH, { bold: true, size: totNumFont, align: 'center', baseline: 'middle' });
     fx += fColCri;
 
     const totMinPct = ((totalMinor / sampleDenominator) * 100).toFixed(2) + '%';
     drawBox(fx, curY, fColMinPct, totalRowH, '#FFFFFF', true);
-    drawText(totMinPct, fx, curY, fColMinPct, totalRowH, { bold: true, size: 6, align: 'center', baseline: 'middle' });
+    drawText(totMinPct, fx, curY, fColMinPct, totalRowH, { bold: true, size: totPctFont, align: 'center', baseline: 'middle' });
     fx += fColMinPct;
 
     const totMajPct = ((totalMajor / sampleDenominator) * 100).toFixed(2) + '%';
     drawBox(fx, curY, fColMajPct, totalRowH, '#FFFFFF', true);
-    drawText(totMajPct, fx, curY, fColMajPct, totalRowH, { bold: true, size: 6, align: 'center', baseline: 'middle' });
+    drawText(totMajPct, fx, curY, fColMajPct, totalRowH, { bold: true, size: totPctFont, align: 'center', baseline: 'middle' });
     fx += fColMajPct;
 
     const totCriPct = ((totalCritical / sampleDenominator) * 100).toFixed(2) + '%';
     drawBox(fx, curY, fColCriPct, totalRowH, '#FFFFFF', true);
-    drawText(totCriPct, fx, curY, fColCriPct, totalRowH, { bold: true, size: 6, align: 'center', baseline: 'middle' });
+    drawText(totCriPct, fx, curY, fColCriPct, totalRowH, { bold: true, size: totPctFont, align: 'center', baseline: 'middle' });
     fx += fColCriPct;
 
     drawBox(fx, curY, fColRemarks, totalRowH, '#FFFFFF', true);
+    if (numDefects > page1FaultCount) {
+      drawText('* Cont. on p.2', fx + 2, curY, fColRemarks - 4, totalRowH, { size: totPctFont, align: 'center', baseline: 'middle' });
+    }
     curY += totalRowH;
 
     // ==========================================
     // SECTION 8: NOTICE BAR "Measurement picture is attached for reference"
     // ==========================================
-    drawBox(leftX, curY, tableWidth, noticeH, '#FFFFFF', true);
-    drawText('Measurement picture is attached for reference', leftX + 5, curY, tableWidth - 10, noticeH, {
+    drawBox(leftX, curY, tableWidth, notice2H, '#FFFFFF', true);
+    drawText('Measurement picture is attached for reference', leftX + 5, curY, tableWidth - 10, notice2H, {
       bold: true,
       font: 'Helvetica-BoldOblique',
-      size: 6.5,
+      size: lerp(5.2, 6.5),
       baseline: 'middle'
     });
-    curY += noticeH;
+    curY += notice2H;
 
     // ==========================================
     // SECTION 9: DIMENSIONAL INSPECTION (Size & Weight & SPI)
     // ==========================================
-    const dimHeaderH = 13.0;
+    const dimHdrFont = lerp(5.2, 6.5);
     drawBox(leftX, curY, tableWidth, dimHeaderH, COLOR_HEADER_DIM, true);
     drawText('Dimensional Inspection (Size & Weight & SPI)', leftX, curY, tableWidth, dimHeaderH, {
       bold: true,
-      size: 6.5,
+      size: dimHdrFont,
       color: '#FFFFFF',
       align: 'center',
       baseline: 'middle'
@@ -762,44 +840,44 @@ async function exportInspectionPDF(req, res) {
     const dColCartonTotal = tableWidth - (dColWidth + dColLength + dColDrop + dColSPI + dColPieceWt + dColBaleWt);
     const dColCartonSingle = dColCartonTotal / 3;
 
-    const dimSubH = 12.0;
+    const dimSubFont = lerp(4.8, 6.0);
     let dx = leftX;
 
     drawBox(dx, curY, dColWidth, dimSubH * 2, '#FFFFFF', true);
-    drawText('Width\n(Inch)', dx, curY, dColWidth, dimSubH * 2, { bold: true, size: 6, align: 'center', baseline: 'middle' });
+    drawText('Width\n(Inch)', dx, curY, dColWidth, dimSubH * 2, { bold: true, size: dimSubFont, align: 'center', baseline: 'middle' });
     dx += dColWidth;
 
     drawBox(dx, curY, dColLength, dimSubH * 2, '#FFFFFF', true);
-    drawText('Length\n(Inch)', dx, curY, dColLength, dimSubH * 2, { bold: true, size: 6, align: 'center', baseline: 'middle' });
+    drawText('Length\n(Inch)', dx, curY, dColLength, dimSubH * 2, { bold: true, size: dimSubFont, align: 'center', baseline: 'middle' });
     dx += dColLength;
 
     drawBox(dx, curY, dColDrop, dimSubH * 2, '#FFFFFF', true);
-    drawText('Drop (Size)', dx, curY, dColDrop, dimSubH * 2, { bold: true, size: 6, align: 'center', baseline: 'middle' });
+    drawText('Drop (Size)', dx, curY, dColDrop, dimSubH * 2, { bold: true, size: dimSubFont, align: 'center', baseline: 'middle' });
     dx += dColDrop;
 
     drawBox(dx, curY, dColSPI, dimSubH * 2, '#FFFFFF', true);
-    drawText('SPI', dx, curY, dColSPI, dimSubH * 2, { bold: true, size: 6, align: 'center', baseline: 'middle' });
+    drawText('SPI', dx, curY, dColSPI, dimSubH * 2, { bold: true, size: dimSubFont, align: 'center', baseline: 'middle' });
     dx += dColSPI;
 
     drawBox(dx, curY, dColPieceWt, dimSubH * 2, '#FFFFFF', true);
-    drawText('Piece Weight\n(gms)', dx, curY, dColPieceWt, dimSubH * 2, { bold: true, size: 6, align: 'center', baseline: 'middle' });
+    drawText('Piece Weight\n(gms)', dx, curY, dColPieceWt, dimSubH * 2, { bold: true, size: dimSubFont, align: 'center', baseline: 'middle' });
     dx += dColPieceWt;
 
     drawBox(dx, curY, dColBaleWt, dimSubH * 2, '#FFFFFF', true);
-    drawText('Bale Weight\n(Kgs)', dx, curY, dColBaleWt, dimSubH * 2, { bold: true, size: 6, align: 'center', baseline: 'middle' });
+    drawText('Bale Weight\n(Kgs)', dx, curY, dColBaleWt, dimSubH * 2, { bold: true, size: dimSubFont, align: 'center', baseline: 'middle' });
     dx += dColBaleWt;
 
     drawBox(dx, curY, dColCartonTotal, dimSubH, '#52525B', true);
-    drawText('CARTON / BALE DIMENTION', dx, curY, dColCartonTotal, dimSubH, { bold: true, size: 6, color: '#FFFFFF', align: 'center', baseline: 'middle' });
+    drawText('CARTON / BALE DIMENTION', dx, curY, dColCartonTotal, dimSubH, { bold: true, size: dimSubFont, color: '#FFFFFF', align: 'center', baseline: 'middle' });
 
     drawBox(dx, curY + dimSubH, dColCartonSingle, dimSubH, '#FFFFFF', true);
-    drawText('Length', dx, curY + dimSubH, dColCartonSingle, dimSubH, { bold: true, size: 6, align: 'center', baseline: 'middle' });
+    drawText('Length', dx, curY + dimSubH, dColCartonSingle, dimSubH, { bold: true, size: dimSubFont, align: 'center', baseline: 'middle' });
 
     drawBox(dx + dColCartonSingle, curY + dimSubH, dColCartonSingle, dimSubH, '#FFFFFF', true);
-    drawText('Width', dx + dColCartonSingle, curY + dimSubH, dColCartonSingle, dimSubH, { bold: true, size: 6, align: 'center', baseline: 'middle' });
+    drawText('Width', dx + dColCartonSingle, curY + dimSubH, dColCartonSingle, dimSubH, { bold: true, size: dimSubFont, align: 'center', baseline: 'middle' });
 
     drawBox(dx + dColCartonSingle * 2, curY + dimSubH, dColCartonSingle, dimSubH, '#FFFFFF', true);
-    drawText('Height', dx + dColCartonSingle * 2, curY + dimSubH, dColCartonSingle, dimSubH, { bold: true, size: 6, align: 'center', baseline: 'middle' });
+    drawText('Height', dx + dColCartonSingle * 2, curY + dimSubH, dColCartonSingle, dimSubH, { bold: true, size: dimSubFont, align: 'center', baseline: 'middle' });
 
     curY += dimSubH * 2;
 
@@ -809,44 +887,44 @@ async function exportInspectionPDF(req, res) {
     const pieceWtParam = dimensionalData.find(d => (d.param || '').toLowerCase().includes('piece weight')) || { spec: '', min: '', max: '', samples: [] };
     const cartonParam = dimensionalData.find(d => (d.param || '').toLowerCase().includes('carton')) || { spec: '20" x 15.5" x 12"', l: '20"', w: '15.5"', h: '12"' };
 
-    const dimRowH = 9.8;
+    const dimDataFont = lerp(4.8, 6.0);
 
     function drawDimRow(label, wVal, lVal, dropVal, spiVal, pwVal, bwVal, cLVal, cWVal, cHVal, isBold = false) {
       let rx = leftX;
       drawBox(rx, curY, dColWidth, dimRowH, '#FFFFFF', true);
-      drawText(wVal || '', rx, curY, dColWidth, dimRowH, { bold: isBold, size: 6, align: 'center', baseline: 'middle' });
+      drawText(wVal || '', rx, curY, dColWidth, dimRowH, { bold: isBold, size: dimDataFont, align: 'center', baseline: 'middle' });
       rx += dColWidth;
 
       drawBox(rx, curY, dColLength, dimRowH, '#FFFFFF', true);
-      drawText(lVal || '', rx, curY, dColLength, dimRowH, { bold: isBold, size: 6, align: 'center', baseline: 'middle' });
+      drawText(lVal || '', rx, curY, dColLength, dimRowH, { bold: isBold, size: dimDataFont, align: 'center', baseline: 'middle' });
       rx += dColLength;
 
       drawBox(rx, curY, dColDrop, dimRowH, '#FFFFFF', true);
-      drawText(dropVal || '', rx, curY, dColDrop, dimRowH, { bold: isBold, size: 6, align: 'center', baseline: 'middle' });
+      drawText(dropVal || '', rx, curY, dColDrop, dimRowH, { bold: isBold, size: dimDataFont, align: 'center', baseline: 'middle' });
       rx += dColDrop;
 
       drawBox(rx, curY, dColSPI, dimRowH, '#FFFFFF', true);
-      drawText(spiVal || '', rx, curY, dColSPI, dimRowH, { bold: isBold, size: 6, align: 'center', baseline: 'middle' });
+      drawText(spiVal || '', rx, curY, dColSPI, dimRowH, { bold: isBold, size: dimDataFont, align: 'center', baseline: 'middle' });
       rx += dColSPI;
 
       drawBox(rx, curY, dColPieceWt, dimRowH, '#FFFFFF', true);
-      drawText(pwVal || '', rx, curY, dColPieceWt, dimRowH, { bold: isBold, size: 6, align: 'center', baseline: 'middle' });
+      drawText(pwVal || '', rx, curY, dColPieceWt, dimRowH, { bold: isBold, size: dimDataFont, align: 'center', baseline: 'middle' });
       rx += dColPieceWt;
 
       drawBox(rx, curY, dColBaleWt, dimRowH, '#FFFFFF', true);
-      drawText(bwVal || '', rx, curY, dColBaleWt, dimRowH, { bold: isBold, size: 6, align: 'center', baseline: 'middle' });
+      drawText(bwVal || '', rx, curY, dColBaleWt, dimRowH, { bold: isBold, size: dimDataFont, align: 'center', baseline: 'middle' });
       rx += dColBaleWt;
 
       drawBox(rx, curY, dColCartonSingle, dimRowH, '#FFFFFF', true);
-      drawText(cLVal || '', rx, curY, dColCartonSingle, dimRowH, { bold: isBold, size: 6, align: 'center', baseline: 'middle' });
+      drawText(cLVal || '', rx, curY, dColCartonSingle, dimRowH, { bold: isBold, size: dimDataFont, align: 'center', baseline: 'middle' });
       rx += dColCartonSingle;
 
       drawBox(rx, curY, dColCartonSingle, dimRowH, '#FFFFFF', true);
-      drawText(cWVal || '', rx, curY, dColCartonSingle, dimRowH, { bold: isBold, size: 6, align: 'center', baseline: 'middle' });
+      drawText(cWVal || '', rx, curY, dColCartonSingle, dimRowH, { bold: isBold, size: dimDataFont, align: 'center', baseline: 'middle' });
       rx += dColCartonSingle;
 
       drawBox(rx, curY, dColCartonSingle, dimRowH, '#FFFFFF', true);
-      drawText(cHVal || '', rx, curY, dColCartonSingle, dimRowH, { bold: isBold, size: 6, align: 'center', baseline: 'middle' });
+      drawText(cHVal || '', rx, curY, dColCartonSingle, dimRowH, { bold: isBold, size: dimDataFont, align: 'center', baseline: 'middle' });
 
       curY += dimRowH;
     }
@@ -865,9 +943,8 @@ async function exportInspectionPDF(req, res) {
       drawDimRow(String(s), `${s}.  ${wS}`, lS, '', spiS, pwS, '', '', '', '', false);
     }
 
-    const dimDefectsH = 12.0;
     drawBox(leftX, curY, tableWidth, dimDefectsH, '#FFFFFF', true);
-    drawText('# of Defects:  0', leftX + 5, curY, tableWidth - 10, dimDefectsH, { bold: true, size: 6.5, baseline: 'middle' });
+    drawText('# of Defects:  0', leftX + 5, curY, tableWidth - 10, dimDefectsH, { bold: true, size: lerp(5.2, 6.5), baseline: 'middle' });
     curY += dimDefectsH;
 
     // ==========================================
@@ -876,13 +953,12 @@ async function exportInspectionPDF(req, res) {
     const aqlTableW = (tableWidth - 8) / 2;
     const aqlX1 = leftX;
     const aqlX2 = leftX + aqlTableW + 8;
-    const aqlHdrH = 12.5;
 
     drawBox(aqlX1, curY, aqlTableW, aqlHdrH, '#FFFFFF', true);
-    drawText('A.Q.L. 2.5 (Level I)', aqlX1, curY, aqlTableW, aqlHdrH, { bold: true, size: 6.5, align: 'center', baseline: 'middle' });
+    drawText('A.Q.L. 2.5 (Level I)', aqlX1, curY, aqlTableW, aqlHdrH, { bold: true, size: lerp(5.2, 6.5), align: 'center', baseline: 'middle' });
 
     drawBox(aqlX2, curY, aqlTableW, aqlHdrH, '#FFFFFF', true);
-    drawText('A.Q.L. 4.0 (Level I)', aqlX2, curY, aqlTableW, aqlHdrH, { bold: true, size: 6.5, align: 'center', baseline: 'middle' });
+    drawText('A.Q.L. 4.0 (Level I)', aqlX2, curY, aqlTableW, aqlHdrH, { bold: true, size: lerp(5.2, 6.5), align: 'center', baseline: 'middle' });
     curY += aqlHdrH;
 
     const subCols = [
@@ -896,12 +972,12 @@ async function exportInspectionPDF(req, res) {
       { name: 'Reject', w: aqlTableW * 0.08 }
     ];
 
-    const aqlSubH = 11.0;
+    const aqlSubFont = lerp(4.6, 5.5);
     function drawAqlSubheaders(baseX) {
       let ax = baseX;
       subCols.forEach(sc => {
         drawBox(ax, curY, sc.w, aqlSubH, '#FFFFFF', true);
-        drawText(sc.name, ax, curY, sc.w, aqlSubH, { bold: true, size: 5.5, align: 'center', baseline: 'middle' });
+        drawText(sc.name, ax, curY, sc.w, aqlSubH, { bold: true, size: aqlSubFont, align: 'center', baseline: 'middle' });
         ax += sc.w;
       });
     }
@@ -926,7 +1002,7 @@ async function exportInspectionPDF(req, res) {
       ['501 - 1200', '80', '7', '8', '150,001 - 500,000', '800', '21', '22']
     ];
 
-    const aqlRowH = 10.0;
+    const aqlDataFont = lerp(4.6, 5.5);
 
     for (let r = 0; r < 5; r++) {
       let ax = aqlX1;
@@ -934,7 +1010,7 @@ async function exportInspectionPDF(req, res) {
       for (let c = 0; c < 8; c++) {
         const sc = subCols[c];
         drawBox(ax, curY, sc.w, aqlRowH, '#FFFFFF', true);
-        drawText(r25[c], ax, curY, sc.w, aqlRowH, { size: 5.5, align: 'center', baseline: 'middle' });
+        drawText(r25[c], ax, curY, sc.w, aqlRowH, { size: aqlDataFont, align: 'center', baseline: 'middle' });
         ax += sc.w;
       }
 
@@ -947,7 +1023,7 @@ async function exportInspectionPDF(req, res) {
         drawText(r40[c], ax, curY, sc.w, aqlRowH, {
           bold: isHighlight,
           color: isHighlight ? '#9C0006' : '#000000',
-          size: 5.5,
+          size: aqlDataFont,
           align: 'center',
           baseline: 'middle'
         });
@@ -960,25 +1036,183 @@ async function exportInspectionPDF(req, res) {
     // ==========================================
     // SECTION 11: REMARKS
     // ==========================================
-    const remarksH = 24.0;
+    const remarksFont = lerp(5.2, 6.5);
     const remarksText = ins.packaging_remarks || ins.employee_notes || 'One pcs in one poly bag and then 06 pcs in a carton.';
     drawBox(leftX, curY, tableWidth, remarksH, '#FFFFFF', true);
     drawText(`Remarks:  ${remarksText}`, leftX + 5, curY, tableWidth - 10, remarksH, {
       bold: true,
-      size: 6.5,
+      size: remarksFont,
       baseline: 'middle'
     });
-    curY += remarksH + 6.0;
+    curY += remarksH;
 
     // ==========================================
     // SECTION 12: SIGNATURES
     // ==========================================
-    const sigH = 34.0;
+    curY += sigSpacerH;
+
+    const sigFont = lerp(6.2, 7.5);
     const qaRep = genInfo.qa_rep || 'Apex Directorate';
     const factoryRep = genInfo.factory_rep || ins.factory_contact_name || '';
 
-    drawText(`Q.A Representative Name:   ${qaRep}`, leftX + 6, curY, 260, sigH, { bold: true, size: 7.5, baseline: 'middle' });
-    drawText(`Factory Representative Name:   ${factoryRep || '_______________________'}`, leftX + 290, curY, 260, sigH, { bold: true, size: 7.5, baseline: 'middle' });
+    drawText(`Q.A Representative Name:   ${qaRep}`, leftX + 6, curY, 260, sigH, { bold: true, size: sigFont, baseline: 'middle' });
+    drawText(`Factory Representative Name:   ${factoryRep || '_______________________'}`, leftX + 290, curY, 260, sigH, { bold: true, size: sigFont, baseline: 'middle' });
+
+    // ==========================================
+    // OPTIONAL: FAULT CONTINUATION PAGE (IF DEFECTS EXCEED PAGE 1 CAPACITY)
+    // ==========================================
+    let continuationPageAdded = false;
+    if (numDefects > page1FaultCount) {
+      continuationPageAdded = true;
+      doc.addPage();
+      let contY = 18;
+
+      drawBox(leftX, contY, tableWidth, 24, COLOR_TITLE_BG, true);
+      drawText('INSPECTION REPORT - FAULTS AND DEFECTS FOUND (CONTINUATION)', leftX, contY + 2, tableWidth, 12, {
+        bold: true,
+        size: 9.5,
+        align: 'center'
+      });
+      drawText(`Sheet: ${ins.sheet_number}   |   Order: ${ins.order_number} (${ins.po_number})   |   Auditor: ${inspectorName}   |   Date: ${insDate}`, leftX, contY + 14, tableWidth, 9, {
+        size: 7,
+        align: 'center'
+      });
+      contY += 32;
+
+      let currentContX = leftX;
+      faultCols.forEach(fc => {
+        drawBox(currentContX, contY, fc.w, 14.5, COLOR_FAULT_HEADER, true);
+        drawText(fc.name, currentContX, contY, fc.w, 14.5, {
+          bold: true,
+          size: 6,
+          color: '#000000',
+          align: 'center',
+          baseline: 'middle'
+        });
+        currentContX += fc.w;
+      });
+      contY += 14.5;
+
+      const contRowH = 13.0;
+      for (let i = page1FaultCount; i < numDefects; i++) {
+        const df = defectFindings[i];
+        let cfx = leftX;
+
+        const m = df ? (parseInt(df.minor_count || 0, 10) || 0) : 0;
+        const maj = df ? (parseInt(df.major_count || 0, 10) || 0) : 0;
+        const c = df ? (parseInt(df.critical_count || 0, 10) || 0) : 0;
+
+        const mPct = ((m / sampleDenominator) * 100).toFixed(2) + '%';
+        const majPct = ((maj / sampleDenominator) * 100).toFixed(2) + '%';
+        const cPct = ((c / sampleDenominator) * 100).toFixed(2) + '%';
+
+        let codeNum = df ? (df.defect_code || df.code || (df.defect_id ? String(df.defect_id) : '')) : '';
+        let defectName = df ? (df.user_input || df.custom_defect_name || df.defect_description || df.defect_name || df.name || '') : '';
+        if (!defectName && df && df.remarks && df.remarks.trim().length > 0) {
+          defectName = df.remarks.trim();
+        }
+        if (!codeNum && defectName) {
+          const match = catalogByName[defectName.trim().toLowerCase()];
+          if (match) codeNum = match.code;
+        }
+        if (!defectName && codeNum) {
+          const match = catalogByCode[String(codeNum)];
+          if (match) defectName = match.name;
+        }
+
+        // Code
+        drawBox(cfx, contY, fColCode, contRowH, '#FFFFFF', true);
+        if (codeNum) {
+          drawText(String(codeNum), cfx, contY, fColCode, contRowH, { bold: true, size: 6.5, align: 'center', baseline: 'middle' });
+        }
+        cfx += fColCode;
+
+        // Defect Name
+        drawBox(cfx, contY, fColName, contRowH, '#FFFFFF', true);
+        if (defectName) {
+          drawText(defectName, cfx + 4, contY, fColName - 8, contRowH, { bold: true, size: 6.5, align: 'center', baseline: 'middle' });
+        }
+        cfx += fColName;
+
+        // MINOR
+        drawBox(cfx, contY, fColMin, contRowH, m > 0 ? COLOR_CELL_GREEN : '#FFFFFF', true);
+        if (m > 0) {
+          drawText(String(m), cfx, contY, fColMin, contRowH, { bold: true, size: 7, color: '#006100', align: 'center', baseline: 'middle' });
+        }
+        cfx += fColMin;
+
+        // MAJOR
+        drawBox(cfx, contY, fColMaj, contRowH, maj > 0 ? COLOR_CELL_ORANGE : '#FFFFFF', true);
+        if (maj > 0) {
+          drawText(String(maj), cfx, contY, fColMaj, contRowH, { bold: true, size: 7, color: '#9C6500', align: 'center', baseline: 'middle' });
+        }
+        cfx += fColMaj;
+
+        // CRITICAL
+        drawBox(cfx, contY, fColCri, contRowH, c > 0 ? COLOR_CELL_RED : '#FFFFFF', true);
+        if (c > 0) {
+          drawText(String(c), cfx, contY, fColCri, contRowH, { bold: true, size: 7, color: '#9C0006', align: 'center', baseline: 'middle' });
+        }
+        cfx += fColCri;
+
+        // MIN %
+        drawBox(cfx, contY, fColMinPct, contRowH, '#FFFFFF', true);
+        drawText(mPct, cfx, contY, fColMinPct, contRowH, { size: 6, align: 'center', baseline: 'middle' });
+        cfx += fColMinPct;
+
+        // MAJ %
+        drawBox(cfx, contY, fColMajPct, contRowH, '#FFFFFF', true);
+        drawText(majPct, cfx, contY, fColMajPct, contRowH, { size: 6, align: 'center', baseline: 'middle' });
+        cfx += fColMajPct;
+
+        // CRI %
+        drawBox(cfx, contY, fColCriPct, contRowH, '#FFFFFF', true);
+        drawText(cPct, cfx, contY, fColCriPct, contRowH, { size: 6, align: 'center', baseline: 'middle' });
+        cfx += fColCriPct;
+
+        // Remarks
+        drawBox(cfx, contY, fColRemarks, contRowH, '#FFFFFF', true);
+        if (df && df.remarks && df.remarks !== defectName) {
+          drawText(df.remarks, cfx + 4, contY, fColRemarks - 8, contRowH, { size: 6, baseline: 'middle' });
+        }
+        cfx += fColRemarks;
+
+        contY += contRowH;
+      }
+
+      // Grand TOTAL Row on Continuation Page
+      const grandTotalH = 15;
+      let gfx = leftX;
+      drawBox(gfx, contY, totalLabelW, grandTotalH, '#FFFFFF', true);
+      drawText('GRAND TOTAL', gfx, contY, totalLabelW, grandTotalH, { bold: true, size: 7.5, align: 'center', baseline: 'middle' });
+      gfx += totalLabelW;
+
+      drawBox(gfx, contY, fColMin, grandTotalH, COLOR_TOTAL_BLUE, true);
+      drawText(String(totalMinor), gfx, contY, fColMin, grandTotalH, { bold: true, size: 8, align: 'center', baseline: 'middle' });
+      gfx += fColMin;
+
+      drawBox(gfx, contY, fColMaj, grandTotalH, COLOR_TOTAL_BLUE, true);
+      drawText(String(totalMajor), gfx, contY, fColMaj, grandTotalH, { bold: true, size: 8, align: 'center', baseline: 'middle' });
+      gfx += fColMaj;
+
+      drawBox(gfx, contY, fColCri, grandTotalH, COLOR_TOTAL_BLUE, true);
+      drawText(String(totalCritical), gfx, contY, fColCri, grandTotalH, { bold: true, size: 8, align: 'center', baseline: 'middle' });
+      gfx += fColCri;
+
+      drawBox(gfx, contY, fColMinPct, grandTotalH, '#FFFFFF', true);
+      drawText(totMinPct, gfx, contY, fColMinPct, grandTotalH, { bold: true, size: 6.5, align: 'center', baseline: 'middle' });
+      gfx += fColMinPct;
+
+      drawBox(gfx, contY, fColMajPct, grandTotalH, '#FFFFFF', true);
+      drawText(totMajPct, gfx, contY, fColMajPct, grandTotalH, { bold: true, size: 6.5, align: 'center', baseline: 'middle' });
+      gfx += fColMajPct;
+
+      drawBox(gfx, contY, fColCriPct, grandTotalH, '#FFFFFF', true);
+      drawText(totCriPct, gfx, contY, fColCriPct, grandTotalH, { bold: true, size: 6.5, align: 'center', baseline: 'middle' });
+      gfx += fColCriPct;
+
+      drawBox(gfx, contY, fColRemarks, grandTotalH, '#FFFFFF', true);
+    }
 
     // ==========================================
     // SECTION 13: PAGE 2+ PHOTO EVIDENCE GALLERY
@@ -987,11 +1221,13 @@ async function exportInspectionPDF(req, res) {
     // ==========================================
     if (photosWithCodes.length > 0) {
       const photosPerPage = 4;
-      const numPages = Math.ceil(photosWithCodes.length / photosPerPage);
+      const numPhotoPages = Math.ceil(photosWithCodes.length / photosPerPage);
+      const totalPagesEstimate = (continuationPageAdded ? 2 : 1) + numPhotoPages;
 
-      for (let pIdx = 0; pIdx < numPages; pIdx++) {
+      for (let pIdx = 0; pIdx < numPhotoPages; pIdx++) {
         doc.addPage();
         let photoY = 18;
+        const pageNum = (continuationPageAdded ? 2 : 1) + 1 + pIdx;
 
         drawBox(leftX, photoY, tableWidth, 24, COLOR_TITLE_BG, true);
         drawText('INSPECTION REPORT - DEFECT & MEASUREMENT PHOTO EVIDENCE', leftX, photoY + 2, tableWidth, 12, {
@@ -999,7 +1235,7 @@ async function exportInspectionPDF(req, res) {
           size: 10,
           align: 'center'
         });
-        drawText(`Sheet: ${ins.sheet_number}   |   Order: ${ins.order_number} (${ins.po_number})   |   Auditor: ${inspectorName}   |   Date: ${insDate}   (Page ${pIdx + 2} of ${numPages + 1})`, leftX, photoY + 14, tableWidth, 9, {
+        drawText(`Sheet: ${ins.sheet_number}   |   Order: ${ins.order_number} (${ins.po_number})   |   Auditor: ${inspectorName}   |   Date: ${insDate}   (Page ${pageNum} of ${totalPagesEstimate})`, leftX, photoY + 14, tableWidth, 9, {
           size: 7,
           align: 'center'
         });
