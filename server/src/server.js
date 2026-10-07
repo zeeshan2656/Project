@@ -5,6 +5,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const { initSocket } = require('./services/socket');
 const { pool } = require('./config/db');
@@ -45,7 +46,19 @@ app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
 // Static serving of media directory with aggressive 7-day browser cache headers
-const MEDIA_DIR = path.resolve(__dirname, '../../../media');
+const fs = require('fs');
+const possibleMediaDirs = [
+  process.env.MEDIA_DIR && path.resolve(process.env.MEDIA_DIR),
+  path.resolve(__dirname, '../../media'),
+  path.resolve(__dirname, '../../../media'),
+  path.resolve(__dirname, '../media')
+].filter(Boolean);
+
+let MEDIA_DIR = possibleMediaDirs.find(d => fs.existsSync(d)) || path.resolve(__dirname, '../../media');
+if (!fs.existsSync(MEDIA_DIR)) {
+  try { fs.mkdirSync(MEDIA_DIR, { recursive: true }); } catch (_) {}
+}
+
 app.use('/media', express.static(MEDIA_DIR, {
   maxAge: '7d',
   immutable: true
@@ -71,6 +84,20 @@ app.use('/api/inspections', inspectionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/defects', defectRoutes);
+
+// Serve Frontend Static Files in Production (Vite React Build)
+const clientDistPath = path.resolve(__dirname, '../../client/dist');
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+  app.get('*', (req, res, next) => {
+    // Pass through API, media, and WebSocket endpoints
+    if (req.path.startsWith('/api') || req.path.startsWith('/media') || req.path.startsWith('/socket.io')) {
+      return next();
+    }
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+  console.log(`[Frontend] Serving React Vite SPA from: ${clientDistPath}`);
+}
 
 // Global Error Handler
 app.use((err, req, res, next) => {

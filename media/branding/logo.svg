@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 120" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient for Shield -->
+    <linearGradient id="shieldBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+
+    <!-- Outer Shield Border Glow -->
+    <linearGradient id="shieldBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="50%" stop-color="#2563EB" />
+      <stop offset="100%" stop-color="#0D9488" />
+    </linearGradient>
+
+    <!-- Primary Brand Word Gradient -->
+    <linearGradient id="fabricTextGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="60%" stop-color="#0284C7" />
+      <stop offset="100%" stop-color="#06B6D4" />
+    </linearGradient>
+
+    <!-- Glowing Checkmark Gradient -->
+    <linearGradient id="checkGlow" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="50%" stop-color="#34D399" />
+      <stop offset="100%" stop-color="#6EE7B7" />
+    </linearGradient>
+
+    <!-- Subtle Drop Shadow Filter for Glow -->
+    <filter id="glowEffect" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#38BDF8" flood-opacity="0.35" />
+    </filter>
+
+    <filter id="checkShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#10B981" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <!-- ========================================================= -->
+  <!-- 1. ICON MARK: Geometric Precision Weave Shield & Check    -->
+  <!-- ========================================================= -->
+  <g transform="translate(10, 12)">
+    <!-- Base Shield with Gradient Border -->
+    <rect x="0" y="0" width="96" height="96" rx="20" fill="url(#shieldBg)" stroke="url(#shieldBorder)" stroke-width="2.5" />
+    
+    <!-- Textile Warp & Weft Precision Grid (Lattice) -->
+    <g stroke="#334155" stroke-width="2" stroke-linecap="round" opacity="0.85">
+      <!-- Horizontal Weft Threads -->
+      <line x1="22" y1="30" x2="74" y2="30" />
+      <line x1="20" y1="48" x2="76" y2="48" />
+      <line x1="22" y1="66" x2="74" y2="66" />
+      <!-- Vertical Warp Threads -->
+      <line x1="30" y1="22" x2="30" y2="74" />
+      <line x1="48" y1="20" x2="48" y2="76" />
+      <line x1="66" y1="22" x2="66" y2="74" />
+    </g>
+
+    <!-- Active Sensor / Thread Intersections (Cyan Micro-Nodes) -->
+    <circle cx="30" cy="30" r="3" fill="#38BDF8" />
+    <circle cx="66" cy="30" r="3" fill="#38BDF8" />
+    <circle cx="48" cy="48" r="4" fill="#06B6D4" filter="url(#glowEffect)" />
+    <circle cx="30" cy="66" r="3" fill="#38BDF8" />
+    <circle cx="66" cy="66" r="3" fill="#38BDF8" />
+
+    <!-- Bold QA Verification Checkmark (High-Visibility Emerald Glow) -->
+    <path d="M 28 50 L 44 66 L 72 32" 
+          fill="none" 
+          stroke="url(#checkGlow)" 
+          stroke-width="7" 
+          stroke-linecap="round" 
+          stroke-linejoin="round"
+          filter="url(#checkShadow)" />
+
+    <!-- Corner Lens Flare Accent -->
+    <circle cx="80" cy="16" r="2.5" fill="#6EE7B7" opacity="0.9" />
+  </g>
+
+  <!-- ========================================================= -->
+  <!-- 2. BRAND TYPOGRAPHY (High-Contrast White & Cyan on Dark)  -->
+  <!-- ========================================================= -->
+  <g transform="translate(122, 60)">
+    <!-- Primary Brand Name: Apex in crisp white, Fabric in vivid cyan -->
+    <text font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" 
+          font-size="36" 
+          font-weight="900" 
+          letter-spacing="-0.03em" 
+          fill="#FFFFFF">
+      Apex<tspan fill="url(#fabricTextGrad)">Fabric</tspan>
+    </text>
+
+    <!-- Secondary Platform Descriptor (Cyan-Silver, Wide Letter Spacing) -->
+    <text y="24" 
+          font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" 
+          font-size="11.5" 
+          font-weight="700" 
+          letter-spacing="3.2px" 
+          fill="#94A3B8">
+      QUALITY AUDITS <tspan fill="#38BDF8">&amp;</tspan> INSPECTION
+    </text>
+
+    <!-- Third-Party Accreditation Pill Badge -->
+    <g transform="translate(0, 32)">
+      <rect x="0" y="0" width="170" height="18" rx="4" fill="#1E293B" stroke="rgba(56, 189, 248, 0.4)" stroke-width="1" />
+      <circle cx="9" cy="9" r="3" fill="#10B981" />
+      <text x="18" y="12.5" 
+            font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" 
+            font-size="8.5" 
+            font-weight="700" 
+            letter-spacing="0.8px" 
+            fill="#CBD5E1">
+        PAKISTAN MILLS 3RD-PARTY QA
+      </text>
+    </g>
+  </g>
+</svg>
