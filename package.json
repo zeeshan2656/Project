@@ -4,8 +4,7 @@
   "description": "Third-Party Fabrication Inspection & Audit Platform",
   "main": "server.js",
   "scripts": {
-    "build": "npm install --prefix client && npm run build --prefix client && npm install --prefix server",
-    "postinstall": "npm install --prefix client && npm run build --prefix client && npm install --prefix server",
+    "build": "node -e \"console.log('Frontend already pre-built in client/dist')\"",
     "start": "node server.js",
     "dev": "node server.js"
   },
