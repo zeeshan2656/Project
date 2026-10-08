@@ -1855,4 +1855,33 @@ main {
   }
 }
 
+/* ==========================================================
+   Employee Dashboard Desktop View Modes (Table vs Cards Grid)
+   ========================================================== */
+.employee-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.employee-table-desktop {
+  display: block;
+}
+
+.employee-cards-mobile {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .employee-view-toggle {
+    display: none !important;
+  }
+  .employee-table-desktop {
+    display: none !important;
+  }
+  .employee-cards-mobile {
+    display: flex !important;
+  }
+}
+
 

@@ -398,8 +398,19 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
   const aqlCriticalPassed = totalCritical === 0;
   const evaluatedPassFail = (aqlMajorPassed && aqlCriticalPassed) ? 'Pass' : 'Fail';
 
+  const isReadOnly = Boolean(
+    sheet && 
+    ['Submitted', 'Approved', 'Completed'].includes(sheet.status) && 
+    sheet.status !== 'Needs Re-inspection'
+  );
+
   // Save In-Progress Draft
   const handleSaveDraft = async () => {
+    if (isReadOnly) {
+      setError('This inspection sheet has already been submitted and cannot be edited. It is in read-only mode.');
+      return;
+    }
+
     setSavingDraft(true);
     setMessage('');
     setError('');
@@ -433,6 +444,11 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
 
   // Submit Completed Inspection
   const handleSubmit = async () => {
+    if (isReadOnly) {
+      setError('This inspection sheet has already been submitted and cannot be edited. It is in read-only mode.');
+      return;
+    }
+
     if (!confirm('Are you ready to submit this completed inspection report for QA Director review?')) return;
 
     setSubmitting(true);
@@ -518,12 +534,46 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
           </a>
 
 
-          <span className="badge badge-in-progress" style={{ fontSize: '0.75rem' }}>
-            <span className="live-pulse" style={{ width: '6px', height: '6px', marginRight: '4px' }} />
+          <span className={`badge ${sheet.status === 'Submitted' || sheet.status === 'Approved' ? 'badge-success' : 'badge-in-progress'}`} style={{ fontSize: '0.75rem' }}>
+            {sheet.status !== 'Submitted' && sheet.status !== 'Approved' && (
+              <span className="live-pulse" style={{ width: '6px', height: '6px', marginRight: '4px' }} />
+            )}
             {sheet.status}
           </span>
         </div>
       </div>
+
+      {/* Locked Read-Only Banner */}
+      {isReadOnly && (
+        <div style={{
+          backgroundColor: '#F0FDF4',
+          border: '1px solid #86EFAC',
+          borderRadius: '8px',
+          padding: '0.85rem 1.15rem',
+          marginBottom: '1.25rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.75rem',
+          boxShadow: '0 1px 3px rgba(16, 185, 129, 0.08)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: '#166534' }}>
+            <ShieldCheck size={22} style={{ color: '#16A34A', flexShrink: 0 }} />
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '0.92rem' }}>
+                Inspection Sheet Submitted &amp; Locked (Read-Only Mode)
+              </div>
+              <div style={{ fontSize: '0.78rem', color: '#15803D' }}>
+                This inspection report has been finalized and submitted ({sheet.status}). Once submitted, reports cannot be altered by inspectors.
+              </div>
+            </div>
+          </div>
+          <span className="badge badge-success" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', fontWeight: 800 }}>
+            🔒 {sheet.status}
+          </span>
+        </div>
+      )}
 
       {message && (
         <div style={{ backgroundColor: '#DCFCE7', borderLeft: '4px solid #16A34A', color: '#15803D', padding: '0.75rem 1rem', borderRadius: '4px', fontSize: '0.85rem', marginBottom: '1rem' }}>
@@ -554,7 +604,7 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
       <div style={{ backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '1rem', marginBottom: '1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
           <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            Inspection Disposition Verdict
+            Inspection Disposition Verdict {isReadOnly && <span style={{ color: '#16A34A', fontSize: '0.75rem' }}>(Locked)</span>}
           </span>
           <span style={{ fontSize: '0.75rem', fontWeight: 700, color: evaluatedPassFail === 'Pass' ? '#16A34A' : '#DC2626' }}>
             Calculated Standard: {evaluatedPassFail.toUpperCase()}
@@ -586,7 +636,8 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
               <button
                 key={opt}
                 type="button"
-                onClick={() => setDisposition(opt)}
+                disabled={isReadOnly}
+                onClick={() => { if (!isReadOnly) setDisposition(opt); }}
                 style={{
                   padding: '0.5rem 1rem',
                   borderRadius: '6px',
@@ -595,7 +646,8 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
                   backgroundColor: bg,
                   color: color,
                   border: border,
-                  cursor: 'pointer',
+                  cursor: isReadOnly ? 'default' : 'pointer',
+                  opacity: isReadOnly && !isSelected ? 0.45 : 1,
                   transition: 'all 0.15s ease'
                 }}
               >
@@ -635,10 +687,11 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
               <span style={{ color: '#64748B' }}>Factory Rep:</span>
               <input
                 type="text"
+                disabled={isReadOnly}
                 value={generalInfo.factory_rep || ''}
                 onChange={(e) => setGeneralInfo({ ...generalInfo, factory_rep: e.target.value })}
                 placeholder="Mill Manager Name"
-                style={{ width: '130px', padding: '2px 4px', fontSize: '0.75rem', border: '1px solid #CBD5E1', borderRadius: '4px' }}
+                style={{ width: '130px', padding: '2px 4px', fontSize: '0.75rem', border: '1px solid #CBD5E1', borderRadius: '4px', backgroundColor: isReadOnly ? '#F1F5F9' : '#FFFFFF' }}
               />
             </div>
           </div>
@@ -668,9 +721,10 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ color: '#64748B' }}>Ready Quantity:</span>
-              {orderRules.ready_qty === 'editable' ? (
+              {orderRules.ready_qty === 'editable' && !isReadOnly ? (
                 <input
                   type="number"
+                  disabled={isReadOnly}
                   value={orderInfo.ready_qty || ''}
                   onChange={(e) => setOrderInfo({ ...orderInfo, ready_qty: parseInt(e.target.value, 10) || 0 })}
                   style={{ width: '80px', padding: '2px 4px', fontSize: '0.75rem', border: '1px solid #CBD5E1', borderRadius: '4px', textAlign: 'right' }}
@@ -696,18 +750,20 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
               <span style={{ color: '#64748B' }}>Visual Sample (AQL 4.0):</span>
               <input
                 type="number"
+                disabled={isReadOnly}
                 value={samplingPlan.visual_sample_size_aql_4 || ''}
                 onChange={(e) => setSamplingPlan({ ...samplingPlan, visual_sample_size_aql_4: parseInt(e.target.value, 10) || 0 })}
-                style={{ width: '60px', padding: '2px 4px', fontSize: '0.75rem', border: '1px solid #CBD5E1', borderRadius: '4px', textAlign: 'right' }}
+                style={{ width: '60px', padding: '2px 4px', fontSize: '0.75rem', border: '1px solid #CBD5E1', borderRadius: '4px', textAlign: 'right', backgroundColor: isReadOnly ? '#F1F5F9' : '#FFFFFF' }}
               />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#64748B' }}>Visual Sample (AQL 2.5):</span>
               <input
                 type="number"
+                disabled={isReadOnly}
                 value={samplingPlan.visual_sample_size_aql_2_5 || ''}
                 onChange={(e) => setSamplingPlan({ ...samplingPlan, visual_sample_size_aql_2_5: parseInt(e.target.value, 10) || 0 })}
-                style={{ width: '60px', padding: '2px 4px', fontSize: '0.75rem', border: '1px solid #CBD5E1', borderRadius: '4px', textAlign: 'right' }}
+                style={{ width: '60px', padding: '2px 4px', fontSize: '0.75rem', border: '1px solid #CBD5E1', borderRadius: '4px', textAlign: 'right', backgroundColor: isReadOnly ? '#F1F5F9' : '#FFFFFF' }}
               />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -727,30 +783,38 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1rem' }}>
           <div>
             <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-              4. Faults &amp; Defects Found on Site
+              4. Faults &amp; Defects Found on Site {isReadOnly && <span style={{ color: '#16A34A', fontSize: '0.78rem' }}>(Locked)</span>}
             </h3>
             <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
               Denominator: {getDenominator()} units | Formula: (Total Defect Count / Denominator) * 100
             </span>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowDefectPicker(true)}
-            className="btn btn-primary btn-sm"
-          >
-            <Plus size={15} />
-            <span>Select Defect from Master</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleAddCustomFinding}
-            className="btn btn-outline-primary btn-sm"
-            style={{ marginLeft: '0.5rem' }}
-          >
-            <Plus size={15} />
-            <span>+ Custom / Manual Defect</span>
-          </button>
+          {!isReadOnly ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setShowDefectPicker(true)}
+                className="btn btn-primary btn-sm"
+              >
+                <Plus size={15} />
+                <span>Select Defect from Master</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleAddCustomFinding}
+                className="btn btn-outline-primary btn-sm"
+              >
+                <Plus size={15} />
+                <span>+ Custom / Manual Defect</span>
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '4px 10px', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '6px', color: '#166534', fontSize: '0.8rem', fontWeight: 700 }}>
+              <ShieldCheck size={16} color="#16A34A" />
+              <span>Inspection Submitted (Defects Locked)</span>
+            </div>
+          )}
         </div>
 
         {/* Desktop Findings Table */}
@@ -782,6 +846,7 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                         <input
                           type="text"
+                          disabled={isReadOnly}
                           value={finding.user_input !== undefined ? finding.user_input : (finding.defect_name || '')}
                           onChange={(e) => handleUpdateFindingName(idx, e.target.value)}
                           placeholder="Defect description (e.g. Dust)"
@@ -794,7 +859,7 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
                             fontWeight: 600,
                             fontSize: '0.8rem',
                             color: '#0F172A',
-                            backgroundColor: '#FFFFFF'
+                            backgroundColor: isReadOnly ? '#F8FAFC' : '#FFFFFF'
                           }}
                         />
                         {finding.reference_images && finding.reference_images.length > 0 && (
@@ -816,27 +881,30 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
                       <input
                         type="number"
                         min="0"
+                        disabled={isReadOnly}
                         value={finding.minor_count ?? ''}
                         onChange={(e) => handleUpdateFindingCount(idx, 'minor_count', e.target.value)}
-                        style={{ width: '50px', padding: '2px 4px', textAlign: 'center', border: '1px solid #CBD5E1', borderRadius: '4px' }}
+                        style={{ width: '50px', padding: '2px 4px', textAlign: 'center', border: '1px solid #CBD5E1', borderRadius: '4px', backgroundColor: isReadOnly ? '#F8FAFC' : '#FFFFFF' }}
                       />
                     </td>
                     <td style={{ padding: '0.4rem', textAlign: 'center' }}>
                       <input
                         type="number"
                         min="0"
+                        disabled={isReadOnly}
                         value={finding.major_count ?? ''}
                         onChange={(e) => handleUpdateFindingCount(idx, 'major_count', e.target.value)}
-                        style={{ width: '50px', padding: '2px 4px', textAlign: 'center', border: '1px solid #CBD5E1', borderRadius: '4px', color: '#D97706', fontWeight: 700 }}
+                        style={{ width: '50px', padding: '2px 4px', textAlign: 'center', border: '1px solid #CBD5E1', borderRadius: '4px', color: '#D97706', fontWeight: 700, backgroundColor: isReadOnly ? '#F8FAFC' : '#FFFFFF' }}
                       />
                     </td>
                     <td style={{ padding: '0.4rem', textAlign: 'center' }}>
                       <input
                         type="number"
                         min="0"
+                        disabled={isReadOnly}
                         value={finding.critical_count ?? ''}
                         onChange={(e) => handleUpdateFindingCount(idx, 'critical_count', e.target.value)}
-                        style={{ width: '50px', padding: '2px 4px', textAlign: 'center', border: '1px solid #CBD5E1', borderRadius: '4px', color: '#DC2626', fontWeight: 700 }}
+                        style={{ width: '50px', padding: '2px 4px', textAlign: 'center', border: '1px solid #CBD5E1', borderRadius: '4px', color: '#DC2626', fontWeight: 700, backgroundColor: isReadOnly ? '#F8FAFC' : '#FFFFFF' }}
                       />
                     </td>
                     <td style={{ padding: '0.5rem 0.4rem', textAlign: 'center', fontWeight: 700 }}>
@@ -856,91 +924,98 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
                             style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', cursor: 'pointer', border: '1px solid #CBD5E1' }}
                           />
                         ))}
-                        {/* Option 1: Live Camera (Take Photo) */}
-                        <label 
-                          title="Take Photo with Camera"
-                          style={{ 
-                            cursor: uploadingFindingPhotoIdx === idx ? 'wait' : 'pointer', 
-                            padding: '4px 6px', 
-                            borderRadius: '4px', 
-                            backgroundColor: '#F0F9FF', 
-                            color: '#0284C7',
-                            border: '1px solid #BAE6FD',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '3px',
-                            fontSize: '0.7rem',
-                            fontWeight: 600
-                          }}
-                        >
-                          {uploadingFindingPhotoIdx === idx ? <RefreshCw size={12} className="animate-spin" /> : <Camera size={13} />}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            disabled={uploadingFindingPhotoIdx === idx}
-                            style={{ display: 'none' }}
-                            onChange={(e) => {
-                              if (e.target.files && e.target.files.length > 0) {
-                                handleUploadFindingPhoto(idx, e.target.files);
-                                e.target.value = '';
-                              }
-                            }}
-                          />
-                        </label>
+                        {!isReadOnly && (
+                          <>
+                            {/* Option 1: Live Camera (Take Photo) */}
+                            <label 
+                              title="Take Photo with Camera"
+                              style={{ 
+                                cursor: uploadingFindingPhotoIdx === idx ? 'wait' : 'pointer', 
+                                padding: '4px 6px', 
+                                borderRadius: '4px', 
+                                backgroundColor: '#F0F9FF', 
+                                color: '#0284C7',
+                                border: '1px solid #BAE6FD',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                fontSize: '0.7rem',
+                                fontWeight: 600
+                              }}
+                            >
+                              {uploadingFindingPhotoIdx === idx ? <RefreshCw size={12} className="animate-spin" /> : <Camera size={13} />}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                disabled={uploadingFindingPhotoIdx === idx}
+                                style={{ display: 'none' }}
+                                onChange={(e) => {
+                                  if (e.target.files && e.target.files.length > 0) {
+                                    handleUploadFindingPhoto(idx, e.target.files);
+                                    e.target.value = '';
+                                  }
+                                }}
+                              />
+                            </label>
 
-                        {/* Option 2: Select from Phone Gallery */}
-                        <label 
-                          title="Choose Photo from Gallery"
-                          style={{ 
-                            cursor: uploadingFindingPhotoIdx === idx ? 'wait' : 'pointer', 
-                            padding: '4px 6px', 
-                            borderRadius: '4px', 
-                            backgroundColor: '#F8FAFC', 
-                            color: '#475569',
-                            border: '1px solid #CBD5E1',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '3px',
-                            fontSize: '0.7rem',
-                            fontWeight: 600
-                          }}
-                        >
-                          <ImageIcon size={13} />
-                          <input
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            disabled={uploadingFindingPhotoIdx === idx}
-                            style={{ display: 'none' }}
-                            onChange={(e) => {
-                              if (e.target.files && e.target.files.length > 0) {
-                                handleUploadFindingPhoto(idx, e.target.files);
-                                e.target.value = '';
-                              }
-                            }}
-                          />
-                        </label>
+                            {/* Option 2: Select from Phone Gallery */}
+                            <label 
+                              title="Choose Photo from Gallery"
+                              style={{ 
+                                cursor: uploadingFindingPhotoIdx === idx ? 'wait' : 'pointer', 
+                                padding: '4px 6px', 
+                                borderRadius: '4px', 
+                                backgroundColor: '#F8FAFC', 
+                                color: '#475569',
+                                border: '1px solid #CBD5E1',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                fontSize: '0.7rem',
+                                fontWeight: 600
+                              }}
+                            >
+                              <ImageIcon size={13} />
+                              <input
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                disabled={uploadingFindingPhotoIdx === idx}
+                                style={{ display: 'none' }}
+                                onChange={(e) => {
+                                  if (e.target.files && e.target.files.length > 0) {
+                                    handleUploadFindingPhoto(idx, e.target.files);
+                                    e.target.value = '';
+                                  }
+                                }}
+                              />
+                            </label>
+                          </>
+                        )}
                       </div>
                     </td>
                     <td style={{ padding: '0.4rem 0.6rem' }}>
                       <input
                         type="text"
+                        disabled={isReadOnly}
                         value={finding.remarks || ''}
                         onChange={(e) => handleUpdateFindingRemarks(idx, e.target.value)}
                         placeholder="Location / details..."
-                        style={{ width: '100%', padding: '2px 6px', fontSize: '0.75rem', border: '1px solid #CBD5E1', borderRadius: '4px' }}
+                        style={{ width: '100%', padding: '2px 6px', fontSize: '0.75rem', border: '1px solid #CBD5E1', borderRadius: '4px', backgroundColor: isReadOnly ? '#F8FAFC' : '#FFFFFF' }}
                       />
                     </td>
                     <td style={{ padding: '0.4rem', textAlign: 'center' }}>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveFinding(idx)}
-                        style={{ background: 'transparent', border: 'none', color: '#DC2626', cursor: 'pointer' }}
-                        title="Remove Defect Finding"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      {!isReadOnly && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFinding(idx)}
+                          style={{ background: 'transparent', border: 'none', color: '#DC2626', cursor: 'pointer' }}
+                          title="Remove Defect Finding"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -1033,6 +1108,7 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
                           <div style={{ flex: 1 }}>
                             <input
                               type="text"
+                              disabled={isReadOnly}
                               value={finding.user_input !== undefined ? finding.user_input : (finding.defect_name || '')}
                               onChange={(e) => handleUpdateFindingName(idx, e.target.value)}
                               placeholder="Defect description (e.g. Dust)"
@@ -1044,7 +1120,7 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
                                 fontWeight: 700,
                                 fontSize: '0.85rem',
                                 color: '#0F172A',
-                                backgroundColor: '#FFFFFF',
+                                backgroundColor: isReadOnly ? '#F8FAFC' : '#FFFFFF',
                                 marginBottom: '2px'
                               }}
                             />
@@ -1066,14 +1142,16 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
                               <span>Ref</span>
                             </button>
                           )}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveFinding(idx)}
-                            style={{ background: '#FEE2E2', border: 'none', color: '#DC2626', padding: '5px 7px', borderRadius: '4px', cursor: 'pointer' }}
-                            title="Delete Defect"
-                          >
-                            <Trash2 size={15} />
-                          </button>
+                          {!isReadOnly && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveFinding(idx)}
+                              style={{ background: '#FEE2E2', border: 'none', color: '#DC2626', padding: '5px 7px', borderRadius: '4px', cursor: 'pointer' }}
+                              title="Delete Defect"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -1110,22 +1188,25 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                               <button
                                 type="button"
+                                disabled={isReadOnly}
                                 onClick={() => handleStepFindingCount(idx, 'minor_count', -1)}
-                                style={{ width: '32px', height: '32px', borderRadius: '4px', border: '1px solid #CBD5E1', background: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                style={{ width: '32px', height: '32px', borderRadius: '4px', border: '1px solid #CBD5E1', background: '#FFFFFF', cursor: isReadOnly ? 'default' : 'pointer', opacity: isReadOnly ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                               >
                                 <Minus size={13} />
                               </button>
                               <input
                                 type="number"
                                 min="0"
+                                disabled={isReadOnly}
                                 value={finding.minor_count ?? ''}
                                 onChange={(e) => handleUpdateFindingCount(idx, 'minor_count', e.target.value)}
-                                style={{ width: '46px', height: '32px', textAlign: 'center', fontWeight: 700, border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '0.9rem', backgroundColor: '#FFFFFF' }}
+                                style={{ width: '46px', height: '32px', textAlign: 'center', fontWeight: 700, border: '1px solid #CBD5E1', borderRadius: '4px', fontSize: '0.9rem', backgroundColor: isReadOnly ? '#F8FAFC' : '#FFFFFF' }}
                               />
                               <button
                                 type="button"
+                                disabled={isReadOnly}
                                 onClick={() => handleStepFindingCount(idx, 'minor_count', 1)}
-                                style={{ width: '32px', height: '32px', borderRadius: '4px', border: '1px solid #CBD5E1', background: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                style={{ width: '32px', height: '32px', borderRadius: '4px', border: '1px solid #CBD5E1', background: '#FFFFFF', cursor: isReadOnly ? 'default' : 'pointer', opacity: isReadOnly ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                               >
                                 <Plus size={13} />
                               </button>
@@ -1159,22 +1240,25 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                               <button
                                 type="button"
+                                disabled={isReadOnly}
                                 onClick={() => handleStepFindingCount(idx, 'major_count', -1)}
-                                style={{ width: '32px', height: '32px', borderRadius: '4px', border: '1px solid #FCD34D', background: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                style={{ width: '32px', height: '32px', borderRadius: '4px', border: '1px solid #FCD34D', background: '#FFFFFF', cursor: isReadOnly ? 'default' : 'pointer', opacity: isReadOnly ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                               >
                                 <Minus size={13} />
                               </button>
                               <input
                                 type="number"
                                 min="0"
+                                disabled={isReadOnly}
                                 value={finding.major_count ?? ''}
                                 onChange={(e) => handleUpdateFindingCount(idx, 'major_count', e.target.value)}
-                                style={{ width: '46px', height: '32px', textAlign: 'center', fontWeight: 700, border: '1px solid #FCD34D', borderRadius: '4px', fontSize: '0.9rem', color: '#D97706', backgroundColor: '#FFFFFF' }}
+                                style={{ width: '46px', height: '32px', textAlign: 'center', fontWeight: 700, border: '1px solid #FCD34D', borderRadius: '4px', fontSize: '0.9rem', color: '#D97706', backgroundColor: isReadOnly ? '#F8FAFC' : '#FFFFFF' }}
                               />
                               <button
                                 type="button"
+                                disabled={isReadOnly}
                                 onClick={() => handleStepFindingCount(idx, 'major_count', 1)}
-                                style={{ width: '32px', height: '32px', borderRadius: '4px', border: '1px solid #FCD34D', background: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                style={{ width: '32px', height: '32px', borderRadius: '4px', border: '1px solid #FCD34D', background: '#FFFFFF', cursor: isReadOnly ? 'default' : 'pointer', opacity: isReadOnly ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                               >
                                 <Plus size={13} />
                               </button>
@@ -1208,22 +1292,25 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                               <button
                                 type="button"
+                                disabled={isReadOnly}
                                 onClick={() => handleStepFindingCount(idx, 'critical_count', -1)}
-                                style={{ width: '32px', height: '32px', borderRadius: '4px', border: '1px solid #FCA5A5', background: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                style={{ width: '32px', height: '32px', borderRadius: '4px', border: '1px solid #FCA5A5', background: '#FFFFFF', cursor: isReadOnly ? 'default' : 'pointer', opacity: isReadOnly ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                               >
                                 <Minus size={13} />
                               </button>
                               <input
                                 type="number"
                                 min="0"
+                                disabled={isReadOnly}
                                 value={finding.critical_count ?? ''}
                                 onChange={(e) => handleUpdateFindingCount(idx, 'critical_count', e.target.value)}
-                                style={{ width: '46px', height: '32px', textAlign: 'center', fontWeight: 700, border: '1px solid #FCA5A5', borderRadius: '4px', fontSize: '0.9rem', color: '#DC2626', backgroundColor: '#FFFFFF' }}
+                                style={{ width: '46px', height: '32px', textAlign: 'center', fontWeight: 700, border: '1px solid #FCA5A5', borderRadius: '4px', fontSize: '0.9rem', color: '#DC2626', backgroundColor: isReadOnly ? '#F8FAFC' : '#FFFFFF' }}
                               />
                               <button
                                 type="button"
+                                disabled={isReadOnly}
                                 onClick={() => handleStepFindingCount(idx, 'critical_count', 1)}
-                                style={{ width: '32px', height: '32px', borderRadius: '4px', border: '1px solid #FCA5A5', background: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                style={{ width: '32px', height: '32px', borderRadius: '4px', border: '1px solid #FCA5A5', background: '#FFFFFF', cursor: isReadOnly ? 'default' : 'pointer', opacity: isReadOnly ? 0.4 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                               >
                                 <Plus size={13} />
                               </button>
@@ -1261,113 +1348,119 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
                                 onClick={() => onOpenPhoto && onOpenPhoto(imgUrl)}
                                 style={{ width: '52px', height: '52px', borderRadius: '6px', objectFit: 'cover', cursor: 'pointer', border: '1px solid #CBD5E1' }}
                               />
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveFindingPhoto(idx, imgI)}
-                                style={{
-                                  position: 'absolute',
-                                  top: '-5px',
-                                  right: '-5px',
-                                  backgroundColor: '#DC2626',
-                                  color: '#FFFFFF',
-                                  border: 'none',
-                                  borderRadius: '50%',
-                                  width: '16px',
-                                  height: '16px',
-                                  fontSize: '10px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  cursor: 'pointer'
-                                }}
-                                title="Remove photo"
-                              >
-                                ×
-                              </button>
+                              {!isReadOnly && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveFindingPhoto(idx, imgI)}
+                                  style={{
+                                    position: 'absolute',
+                                    top: '-5px',
+                                    right: '-5px',
+                                    backgroundColor: '#DC2626',
+                                    color: '#FFFFFF',
+                                    border: 'none',
+                                    borderRadius: '50%',
+                                    width: '16px',
+                                    height: '16px',
+                                    fontSize: '10px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer'
+                                  }}
+                                  title="Remove photo"
+                                >
+                                  ×
+                                </button>
+                              )}
                             </div>
                           ))}
-                          {/* Option 1: Live Camera (Take Photo) */}
-                          <label
-                            style={{
-                              cursor: uploadingFindingPhotoIdx === idx ? 'wait' : 'pointer',
-                              height: '46px',
-                              padding: '0 0.85rem',
-                              borderRadius: '8px',
-                              backgroundColor: '#F0F9FF',
-                              border: '1px solid #0284C7',
-                              color: '#0284C7',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.45rem',
-                              fontSize: '0.78rem',
-                              fontWeight: 600,
-                              flex: '1 1 auto',
-                              justifyContent: 'center',
-                              boxShadow: '0 1px 2px rgba(2, 132, 199, 0.08)'
-                            }}
-                          >
-                            {uploadingFindingPhotoIdx === idx ? (
-                              <>
-                                <RefreshCw size={15} className="animate-spin" />
-                                <span>Uploading...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Camera size={16} />
-                                <span>Take Photo</span>
-                              </>
-                            )}
-                            <input
-                              type="file"
-                              accept="image/*"
-                              capture="environment"
-                              disabled={uploadingFindingPhotoIdx === idx}
-                              style={{ display: 'none' }}
-                              onChange={(e) => {
-                                if (e.target.files && e.target.files.length > 0) {
-                                  handleUploadFindingPhoto(idx, e.target.files);
-                                  e.target.value = '';
-                                }
-                              }}
-                            />
-                          </label>
+                          {!isReadOnly && (
+                            <>
+                              {/* Option 1: Live Camera (Take Photo) */}
+                              <label
+                                style={{
+                                  cursor: uploadingFindingPhotoIdx === idx ? 'wait' : 'pointer',
+                                  height: '46px',
+                                  padding: '0 0.85rem',
+                                  borderRadius: '8px',
+                                  backgroundColor: '#F0F9FF',
+                                  border: '1px solid #0284C7',
+                                  color: '#0284C7',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.45rem',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 600,
+                                  flex: '1 1 auto',
+                                  justifyContent: 'center',
+                                  boxShadow: '0 1px 2px rgba(2, 132, 199, 0.08)'
+                                }}
+                              >
+                                {uploadingFindingPhotoIdx === idx ? (
+                                  <>
+                                    <RefreshCw size={15} className="animate-spin" />
+                                    <span>Uploading...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Camera size={16} />
+                                    <span>Take Photo</span>
+                                  </>
+                                )}
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  capture="environment"
+                                  disabled={uploadingFindingPhotoIdx === idx}
+                                  style={{ display: 'none' }}
+                                  onChange={(e) => {
+                                    if (e.target.files && e.target.files.length > 0) {
+                                      handleUploadFindingPhoto(idx, e.target.files);
+                                      e.target.value = '';
+                                    }
+                                  }}
+                                />
+                              </label>
 
-                          {/* Option 2: Gallery / Photo Library */}
-                          <label
-                            style={{
-                              cursor: uploadingFindingPhotoIdx === idx ? 'wait' : 'pointer',
-                              height: '46px',
-                              padding: '0 0.85rem',
-                              borderRadius: '8px',
-                              backgroundColor: '#F8FAFC',
-                              border: '1px solid #94A3B8',
-                              color: '#334155',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.45rem',
-                              fontSize: '0.78rem',
-                              fontWeight: 600,
-                              flex: '1 1 auto',
-                              justifyContent: 'center',
-                              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
-                            }}
-                          >
-                            <ImageIcon size={16} />
-                            <span>Choose Gallery</span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              multiple
-                              disabled={uploadingFindingPhotoIdx === idx}
-                              style={{ display: 'none' }}
-                              onChange={(e) => {
-                                if (e.target.files && e.target.files.length > 0) {
-                                  handleUploadFindingPhoto(idx, e.target.files);
-                                  e.target.value = '';
-                                }
-                              }}
-                            />
-                          </label>
+                              {/* Option 2: Gallery / Photo Library */}
+                              <label
+                                style={{
+                                  cursor: uploadingFindingPhotoIdx === idx ? 'wait' : 'pointer',
+                                  height: '46px',
+                                  padding: '0 0.85rem',
+                                  borderRadius: '8px',
+                                  backgroundColor: '#F8FAFC',
+                                  border: '1px solid #94A3B8',
+                                  color: '#334155',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.45rem',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 600,
+                                  flex: '1 1 auto',
+                                  justifyContent: 'center',
+                                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+                                }}
+                              >
+                                <ImageIcon size={16} />
+                                <span>Choose Gallery</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  multiple
+                                  disabled={uploadingFindingPhotoIdx === idx}
+                                  style={{ display: 'none' }}
+                                  onChange={(e) => {
+                                    if (e.target.files && e.target.files.length > 0) {
+                                      handleUploadFindingPhoto(idx, e.target.files);
+                                      e.target.value = '';
+                                    }
+                                  }}
+                                />
+                              </label>
+                            </>
+                          )}
                         </div>
                       </div>
 
@@ -1378,10 +1471,11 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
                         </div>
                         <input
                           type="text"
+                          disabled={isReadOnly}
                           value={finding.remarks || ''}
                           onChange={(e) => handleUpdateFindingRemarks(idx, e.target.value)}
                           placeholder="e.g., Left sleeve seam, pocket hem..."
-                          style={{ width: '100%', padding: '0.5rem 0.65rem', fontSize: '0.8rem', border: '1px solid #CBD5E1', borderRadius: '6px', backgroundColor: '#FFFFFF' }}
+                          style={{ width: '100%', padding: '0.5rem 0.65rem', fontSize: '0.8rem', border: '1px solid #CBD5E1', borderRadius: '6px', backgroundColor: isReadOnly ? '#F8FAFC' : '#FFFFFF' }}
                         />
                       </div>
 
@@ -1407,7 +1501,7 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
                         }}
                       >
                         <Check size={16} />
-                        <span>Save &amp; Collapse Card</span>
+                        <span>{isReadOnly ? 'Close Card' : 'Save & Collapse Card'}</span>
                       </button>
                     </div>
                   );
@@ -1464,29 +1558,31 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
                           onClick={() => handleToggleDefectCard(idx)}
                           className="btn btn-secondary btn-sm"
                           style={{ padding: '4px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '3px' }}
-                          title="Edit Card"
+                          title={isReadOnly ? 'View Card Details' : 'Edit Card'}
                         >
                           <Edit2 size={12} />
-                          <span>Edit</span>
+                          <span>{isReadOnly ? 'View' : 'Edit'}</span>
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveFinding(idx)}
-                          style={{
-                            background: '#FEE2E2',
-                            border: 'none',
-                            color: '#DC2626',
-                            borderRadius: '4px',
-                            padding: '6px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                          title="Remove Defect"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {!isReadOnly && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFinding(idx)}
+                            style={{
+                              background: '#FEE2E2',
+                              border: 'none',
+                              color: '#DC2626',
+                              borderRadius: '4px',
+                              padding: '6px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            title="Remove Defect"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -1545,29 +1641,31 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
           )}
 
           {/* Bottom Action: Select Defect from Master */}
-          <button
-            type="button"
-            onClick={() => setShowDefectPicker(true)}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              borderRadius: '6px',
-              backgroundColor: '#0F172A',
-              color: '#FFFFFF',
-              fontWeight: 700,
-              fontSize: '0.85rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              border: 'none',
-              cursor: 'pointer',
-              marginBottom: '1rem'
-            }}
-          >
-            <Plus size={16} />
-            <span>Select Defect from Master</span>
-          </button>
+          {!isReadOnly && (
+            <button
+              type="button"
+              onClick={() => setShowDefectPicker(true)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                borderRadius: '6px',
+                backgroundColor: '#0F172A',
+                color: '#FFFFFF',
+                fontWeight: 700,
+                fontSize: '0.85rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                border: 'none',
+                cursor: 'pointer',
+                marginBottom: '1rem'
+              }}
+            >
+              <Plus size={16} />
+              <span>Select Defect from Master</span>
+            </button>
+          )}
 
           {/* Mobile Grand Total Summary Card */}
           <div style={{
@@ -1611,7 +1709,7 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
             <div>
               <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-                5. Dimensional &amp; Tolerance Inspection (13 Samples)
+                5. Dimensional &amp; Tolerance Inspection (13 Samples) {isReadOnly && <span style={{ color: '#16A34A', fontSize: '0.78rem' }}>(Locked)</span>}
               </h3>
               <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
                 Verify physical garment measurements against specified tolerance limits.
@@ -1659,6 +1757,7 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
                           type="text"
                           inputMode="decimal"
                           pattern="[0-9]*[.]?[0-9]*"
+                          disabled={isReadOnly}
                           value={dim.samples?.[sIdx] ?? ''}
                           onChange={(e) => handleDimensionalSampleChange(pIdx, sIdx, e.target.value)}
                           style={{
@@ -1667,7 +1766,8 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
                             textAlign: 'center',
                             fontSize: '0.75rem',
                             border: '1px solid #CBD5E1',
-                            borderRadius: '3px'
+                            borderRadius: '3px',
+                            backgroundColor: isReadOnly ? '#F8FAFC' : '#FFFFFF'
                           }}
                         />
                       </td>
@@ -1732,6 +1832,7 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
                         type="text"
                         inputMode="decimal"
                         pattern="[0-9]*[.]?[0-9]*"
+                        disabled={isReadOnly}
                         value={dim.samples?.[sIdx] ?? ''}
                         onChange={(e) => handleDimensionalSampleChange(pIdx, sIdx, e.target.value)}
                         style={{
@@ -1741,7 +1842,7 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
                           fontSize: '0.78rem',
                           border: '1px solid #CBD5E1',
                           borderRadius: '4px',
-                          backgroundColor: '#FFFFFF'
+                          backgroundColor: isReadOnly ? '#F8FAFC' : '#FFFFFF'
                         }}
                       />
                     </div>
@@ -1807,22 +1908,23 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
       {/* 6. PACKAGING & INSPECTOR REMARKS */}
       <div style={{ backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '1.25rem', marginBottom: '1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
         <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', marginBottom: '0.5rem' }}>
-          7. Packaging Condition &amp; General Observations
+          7. Packaging Condition &amp; General Observations {isReadOnly && <span style={{ color: '#16A34A', fontSize: '0.78rem' }}>(Locked)</span>}
         </h3>
         <textarea
           rows={3}
+          disabled={isReadOnly}
           value={packagingRemarks}
           onChange={(e) => setPackagingRemarks(e.target.value)}
           placeholder="Enter carton drop test result, barcode scan confirmation, polybag thickness, shipping markings conformance..."
           className="form-textarea"
-          style={{ fontSize: '0.85rem' }}
+          style={{ fontSize: '0.85rem', backgroundColor: isReadOnly ? '#F8FAFC' : '#FFFFFF' }}
         />
       </div>
 
       {/* 7. DIGITAL SIGNATURES & CONFORMANCE SIGN-OFF */}
       <div style={{ backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '1.25rem', marginBottom: '1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
         <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', marginBottom: '0.75rem' }}>
-          8. Conformance Verification &amp; Digital Sign-Off
+          8. Conformance Verification &amp; Digital Sign-Off {isReadOnly && <span style={{ color: '#16A34A', fontSize: '0.78rem' }}>(Locked)</span>}
         </h3>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
@@ -1832,9 +1934,10 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
             <p style={{ fontSize: '0.75rem', color: '#64748B', margin: '4px 0 8px 0' }}>
               {generalInfo.inspector_name || sheet.assigned_employee_name}
             </p>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: isReadOnly ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
               <input
                 type="checkbox"
+                disabled={isReadOnly}
                 checked={signatures.auditor_signed}
                 onChange={(e) => setSignatures({ ...signatures, auditor_signed: e.target.checked })}
               />
@@ -1849,15 +1952,17 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
             <strong style={{ fontSize: '0.8rem', color: '#0F172A' }}>Factory Representative</strong>
             <input
               type="text"
+              disabled={isReadOnly}
               placeholder="Representative Full Name"
               value={signatures.factory_rep_name || ''}
               onChange={(e) => setSignatures({ ...signatures, factory_rep_name: e.target.value })}
               className="form-input"
-              style={{ fontSize: '0.75rem', margin: '4px 0 8px 0', padding: '3px 6px' }}
+              style={{ fontSize: '0.75rem', margin: '4px 0 8px 0', padding: '3px 6px', backgroundColor: isReadOnly ? '#F1F5F9' : '#FFFFFF' }}
             />
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: isReadOnly ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
               <input
                 type="checkbox"
+                disabled={isReadOnly}
                 checked={signatures.factory_rep_signed}
                 onChange={(e) => setSignatures({ ...signatures, factory_rep_signed: e.target.checked })}
               />
@@ -1899,25 +2004,55 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={handleSaveDraft}
-            disabled={savingDraft || submitting}
-            className="btn btn-outline btn-sm"
-          >
-            <Save size={15} />
-            <span>{savingDraft ? 'Saving...' : 'Save Draft'}</span>
-          </button>
+          {isReadOnly ? (
+            <>
+              <span style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '0.4rem', 
+                padding: '0.45rem 0.85rem', 
+                borderRadius: '6px', 
+                backgroundColor: '#DCFCE7', 
+                color: '#15803D', 
+                border: '1px solid #86EFAC', 
+                fontSize: '0.82rem', 
+                fontWeight: 700 
+              }}>
+                <ShieldCheck size={16} /> Submitted &amp; Finalized (Locked)
+              </span>
+              <button
+                type="button"
+                onClick={onBack}
+                className="btn btn-outline btn-sm"
+                style={{ fontWeight: 600 }}
+              >
+                <ArrowLeft size={15} />
+                <span>Back to Tasks</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                disabled={savingDraft || submitting}
+                className="btn btn-outline btn-sm"
+              >
+                <Save size={15} />
+                <span>{savingDraft ? 'Saving...' : 'Save Draft'}</span>
+              </button>
 
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={savingDraft || submitting}
-            className="btn btn-primary btn-sm"
-          >
-            <Send size={15} />
-            <span>{submitting ? 'Submitting...' : 'Submit Final Report'}</span>
-          </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={savingDraft || submitting}
+                className="btn btn-primary btn-sm"
+              >
+                <Send size={15} />
+                <span>{submitting ? 'Submitting...' : 'Submit Final Report'}</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 

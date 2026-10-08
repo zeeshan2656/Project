@@ -21,7 +21,11 @@ import {
   Menu,
   X,
   Globe,
-  Filter
+  Filter,
+  Table,
+  LayoutGrid,
+  Eye,
+  ShieldCheck
 } from 'lucide-react';
 import { AdvancedFilterModal } from '../../components/AdvancedFilterModal';
 
@@ -30,6 +34,13 @@ export function EmployeeDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen,
   const { user, logout } = useAuth();
   const { companyName, whatsappLink } = useSite();
   const { subscribe } = useSocket();
+
+  const [desktopViewMode, setDesktopViewMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('employee_view_mode') || 'table';
+    }
+    return 'table';
+  });
 
   const [inspections, setInspections] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -289,6 +300,30 @@ export function EmployeeDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen,
 
           {/* Action Buttons: Single row on mobile */}
           <div className="order-header-actions mobile-actions-row">
+            {/* Desktop View Switcher: Table View vs Cards in Rows */}
+            <div className="employee-view-toggle">
+              <button
+                type="button"
+                onClick={() => { setDesktopViewMode('table'); localStorage.setItem('employee_view_mode', 'table'); }}
+                className={`btn btn-sm ${desktopViewMode === 'table' ? 'btn-primary' : 'btn-outline'}`}
+                style={{ padding: '5px 11px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 700 }}
+                title="Desktop Table of Inspection List"
+              >
+                <Table size={14} />
+                <span>Table View</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setDesktopViewMode('cards'); localStorage.setItem('employee_view_mode', 'cards'); }}
+                className={`btn btn-sm ${desktopViewMode === 'cards' ? 'btn-primary' : 'btn-outline'}`}
+                style={{ padding: '5px 11px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 700 }}
+                title="Desktop Cards in Rows"
+              >
+                <LayoutGrid size={14} />
+                <span>Cards in Rows</span>
+              </button>
+            </div>
+
             <button onClick={fetchMyInspections} className="btn btn-outline btn-sm">
               <RefreshCw size={14} /> <span>Refresh Tasks</span>
             </button>
@@ -370,100 +405,326 @@ export function EmployeeDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen,
           </div>
         </AdvancedFilterModal>
 
-        {/* Task Cards List */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
-          {filteredTasks.length > 0 ? (
-            filteredTasks.map((ins) => (
+        {/* Task List / Cards Display Area */}
+        {filteredTasks.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '3.5rem 1rem', color: '#94A3B8', backgroundColor: '#FFFFFF', borderRadius: 'var(--radius-sm)', border: '1px solid #E2E8F0' }}>
+            <CheckCircle size={36} color="#10B981" style={{ margin: '0 auto 0.75rem auto' }} />
+            <p style={{ fontWeight: 600, color: '#334155' }}>All caught up!</p>
+            <p style={{ fontSize: '0.85rem', marginTop: '4px' }}>No inspections matching this tab filter.</p>
+          </div>
+        ) : desktopViewMode === 'table' ? (
+          <>
+            {/* DESKTOP TABLE VIEW */}
+            <div className="employee-table-desktop card" style={{ padding: 0, overflow: 'hidden', border: '1px solid #CBD5E1', boxShadow: 'var(--shadow-sm)', borderRadius: 'var(--radius-sm)' }}>
+              <div className="table-responsive" style={{ overflowX: 'auto' }}>
+                <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#F8FAFC' }}>
+                      <th style={{ minWidth: '140px', padding: '0.85rem 1rem' }}>Sheet # &amp; PO</th>
+                      <th style={{ minWidth: '170px', padding: '0.85rem 1rem' }}>Factory / Mill</th>
+                      <th style={{ minWidth: '140px', padding: '0.85rem 1rem' }}>Location</th>
+                      <th style={{ minWidth: '140px', padding: '0.85rem 1rem' }}>Product Type</th>
+                      <th style={{ textAlign: 'right', minWidth: '100px', padding: '0.85rem 1rem' }}>Lot Size</th>
+                      <th style={{ textAlign: 'center', minWidth: '120px', padding: '0.85rem 1rem' }}>Status</th>
+                      <th style={{ textAlign: 'right', minWidth: '160px', padding: '0.85rem 1rem' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTasks.map((ins) => (
+                      <tr 
+                        key={ins.id} 
+                        style={{ 
+                          borderBottom: '1px solid #F1F5F9',
+                          backgroundColor: ins.status === 'Needs Re-inspection' ? '#FEF2F2' : '#FFFFFF'
+                        }}
+                      >
+                        <td style={{ padding: '0.85rem 1rem' }}>
+                          <div style={{ fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#0F172A' }}>
+                            {ins.sheet_number}
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                            PO: <strong style={{ color: '#0284C7' }}>{ins.po_number || 'N/A'}</strong>
+                          </div>
+                        </td>
+                        <td style={{ padding: '0.85rem 1rem' }}>
+                          <strong style={{ color: '#0F172A', display: 'block' }}>{ins.factory_name}</strong>
+                          {ins.status === 'Needs Re-inspection' && ins.admin_remarks && (
+                            <span style={{ fontSize: '0.72rem', color: '#DC2626', fontStyle: 'italic' }}>
+                              ⚠️ "{ins.admin_remarks}"
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ padding: '0.85rem 1rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#475569' }}>
+                            <MapPin size={13} color="#DC2626" />
+                            <span>{ins.factory_city}</span>
+                            {ins.factory_map_url && (
+                              <a href={ins.factory_map_url} target="_blank" rel="noopener noreferrer" title="View Google Maps" style={{ color: '#0284C7', marginLeft: '3px' }}>
+                                <ExternalLink size={12} />
+                              </a>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{ padding: '0.85rem 1rem' }}>
+                          <span style={{ fontWeight: 600, color: '#334155' }}>{ins.product_type}</span>
+                        </td>
+                        <td style={{ textAlign: 'right', padding: '0.85rem 1rem', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+                          {ins.ordered_quantity?.toLocaleString()} pcs
+                        </td>
+                        <td style={{ textAlign: 'center', padding: '0.85rem 1rem' }}>
+                          <span className={`badge ${getStatusBadge(ins.status)}`}>
+                            {ins.status}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'right', padding: '0.85rem 1rem' }}>
+                          {['Submitted', 'Approved'].includes(ins.status) ? (
+                            <button
+                              onClick={() => setActiveSheetId(ins.id)}
+                              className="btn btn-outline btn-sm"
+                              style={{ color: '#166534', borderColor: '#BBF7D0', backgroundColor: '#F0FDF4', fontWeight: 700, fontSize: '0.75rem', padding: '5px 10px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                              title="Inspection sheet finalized. Open in Read-Only mode."
+                            >
+                              <Eye size={13} />
+                              <span>View Sheet (Read-Only)</span>
+                            </button>
+                          ) : ins.status === 'Needs Re-inspection' ? (
+                            <button
+                              onClick={() => setActiveSheetId(ins.id)}
+                              className="btn btn-danger btn-sm"
+                              style={{ fontWeight: 700, fontSize: '0.75rem', padding: '5px 10px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <AlertTriangle size={13} />
+                              <span>Re-Inspect</span>
+                            </button>
+                          ) : ins.status === 'Not Started' ? (
+                            <button
+                              onClick={() => setActiveSheetId(ins.id)}
+                              className="btn btn-success btn-sm"
+                              style={{ fontWeight: 700, fontSize: '0.75rem', padding: '5px 10px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <span>Start Audit</span>
+                              <ChevronRight size={13} />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setActiveSheetId(ins.id)}
+                              className="btn btn-primary btn-sm"
+                              style={{ fontWeight: 700, fontSize: '0.75rem', padding: '5px 10px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <span>Resume Audit</span>
+                              <ChevronRight size={13} />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* MOBILE CARDS VIEW (Fallback for Mobile Screens) */}
+            <div className="employee-cards-mobile" style={{ display: 'none', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+              {filteredTasks.map((ins) => (
+                <div 
+                  key={ins.id}
+                  className="card"
+                  style={{
+                    border: ins.status === 'Needs Re-inspection' ? '2px solid #EF4444' : '1px solid #CBD5E1',
+                    boxShadow: 'var(--shadow-sm)',
+                    borderRadius: 'var(--radius-sm)'
+                  }}
+                >
+                  <div className="card-header" style={{ backgroundColor: ins.status === 'Needs Re-inspection' ? '#FEF2F2' : '#F8FAFC', padding: '0.85rem 1.15rem' }}>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: '#0F172A' }}>
+                        {ins.sheet_number}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: '#64748B', marginLeft: '6px' }}>
+                        (PO: {ins.po_number})
+                      </span>
+                    </div>
+                    <span className={`badge ${getStatusBadge(ins.status)}`}>
+                      {ins.status}
+                    </span>
+                  </div>
+
+                  <div className="card-body" style={{ padding: '1.15rem' }}>
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', marginBottom: '0.35rem' }}>
+                      {ins.factory_name}
+                    </h3>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', color: '#475569', marginBottom: '0.75rem' }}>
+                      <MapPin size={14} color="#DC2626" />
+                      <span>{ins.factory_address} ({ins.factory_city})</span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', backgroundColor: '#F1F5F9', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-xs)', fontSize: '0.8rem', marginBottom: '1rem' }}>
+                      <div>
+                        <span style={{ color: '#64748B' }}>Product:</span>
+                        <div style={{ fontWeight: 600 }}>{ins.product_type}</div>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748B' }}>Total Lot Qty:</span>
+                        <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{ins.ordered_quantity?.toLocaleString()} units</div>
+                      </div>
+                    </div>
+
+                    {/* If Re-inspection requested by admin */}
+                    {ins.status === 'Needs Re-inspection' && ins.admin_remarks && (
+                      <div style={{ backgroundColor: '#FEE2E2', borderLeft: '3px solid #DC2626', padding: '0.65rem 0.85rem', fontSize: '0.8rem', color: '#991B1B', marginBottom: '1rem' }}>
+                        <strong>Director Remarks:</strong> "{ins.admin_remarks}"
+                      </div>
+                    )}
+
+                    {/* Actions Bar */}
+                    <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', justifyContent: 'space-between' }}>
+                      {ins.factory_map_url && (
+                        <a
+                          href={ins.factory_map_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-outline btn-sm"
+                          style={{ fontSize: '0.75rem' }}
+                        >
+                          <MapPin size={13} /> GPS Pin
+                        </a>
+                      )}
+
+                      <button
+                        onClick={() => setActiveSheetId(ins.id)}
+                        className={`btn ${
+                          ['Submitted', 'Approved'].includes(ins.status) ? 'btn-outline' :
+                          ins.status === 'Needs Re-inspection' ? 'btn-danger' : 
+                          ins.status === 'Not Started' ? 'btn-success' : 'btn-primary'
+                        }`}
+                        style={{ 
+                          flex: 1, 
+                          justifyContent: 'center', 
+                          fontWeight: 700,
+                          color: ['Submitted', 'Approved'].includes(ins.status) ? '#166534' : undefined,
+                          borderColor: ['Submitted', 'Approved'].includes(ins.status) ? '#BBF7D0' : undefined,
+                          backgroundColor: ['Submitted', 'Approved'].includes(ins.status) ? '#F0FDF4' : undefined
+                        }}
+                      >
+                        <span>
+                          {ins.status === 'Not Started' ? 'Open & Start Audit' :
+                           ins.status === 'In Progress' || ins.status === 'Draft Saved' ? 'Resume Field Audit' :
+                           ins.status === 'Needs Re-inspection' ? 'Re-Inspect Sheet' :
+                           'View Sheet (Read-Only)'}
+                        </span>
+                        {['Submitted', 'Approved'].includes(ins.status) ? <Eye size={15} /> : <ChevronRight size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          /* CARDS IN ROWS (MULTI-COLUMN GRID) VIEW */
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.25rem', width: '100%' }}>
+            {filteredTasks.map((ins) => (
               <div 
                 key={ins.id}
                 className="card"
                 style={{
                   border: ins.status === 'Needs Re-inspection' ? '2px solid #EF4444' : '1px solid #CBD5E1',
                   boxShadow: 'var(--shadow-sm)',
-                  borderRadius: 'var(--radius-sm)'
+                  borderRadius: 'var(--radius-sm)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
                 }}
               >
-                <div className="card-header" style={{ backgroundColor: ins.status === 'Needs Re-inspection' ? '#FEF2F2' : '#F8FAFC', padding: '0.85rem 1.15rem' }}>
-                  <div>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: '#0F172A' }}>
-                      {ins.sheet_number}
-                    </span>
-                    <span style={{ fontSize: '0.75rem', color: '#64748B', marginLeft: '6px' }}>
-                      (PO: {ins.po_number})
+                <div>
+                  <div className="card-header" style={{ backgroundColor: ins.status === 'Needs Re-inspection' ? '#FEF2F2' : '#F8FAFC', padding: '0.85rem 1.15rem' }}>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: '#0F172A' }}>
+                        {ins.sheet_number}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: '#64748B', marginLeft: '6px' }}>
+                        (PO: {ins.po_number})
+                      </span>
+                    </div>
+                    <span className={`badge ${getStatusBadge(ins.status)}`}>
+                      {ins.status}
                     </span>
                   </div>
-                  <span className={`badge ${getStatusBadge(ins.status)}`}>
-                    {ins.status}
-                  </span>
+
+                  <div className="card-body" style={{ padding: '1.15rem' }}>
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', marginBottom: '0.35rem' }}>
+                      {ins.factory_name}
+                    </h3>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', color: '#475569', marginBottom: '0.75rem' }}>
+                      <MapPin size={14} color="#DC2626" />
+                      <span>{ins.factory_address} ({ins.factory_city})</span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', backgroundColor: '#F1F5F9', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-xs)', fontSize: '0.8rem', marginBottom: '1rem' }}>
+                      <div>
+                        <span style={{ color: '#64748B' }}>Product:</span>
+                        <div style={{ fontWeight: 600 }}>{ins.product_type}</div>
+                      </div>
+                      <div>
+                        <span style={{ color: '#64748B' }}>Total Lot Qty:</span>
+                        <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{ins.ordered_quantity?.toLocaleString()} units</div>
+                      </div>
+                    </div>
+
+                    {/* If Re-inspection requested by admin */}
+                    {ins.status === 'Needs Re-inspection' && ins.admin_remarks && (
+                      <div style={{ backgroundColor: '#FEE2E2', borderLeft: '3px solid #DC2626', padding: '0.65rem 0.85rem', fontSize: '0.8rem', color: '#991B1B', marginBottom: '1rem' }}>
+                        <strong>Director Remarks:</strong> "{ins.admin_remarks}"
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div className="card-body" style={{ padding: '1.15rem' }}>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', marginBottom: '0.35rem' }}>
-                    {ins.factory_name}
-                  </h3>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', color: '#475569', marginBottom: '0.75rem' }}>
-                    <MapPin size={14} color="#DC2626" />
-                    <span>{ins.factory_address} ({ins.factory_city})</span>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', backgroundColor: '#F1F5F9', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-xs)', fontSize: '0.8rem', marginBottom: '1rem' }}>
-                    <div>
-                      <span style={{ color: '#64748B' }}>Product:</span>
-                      <div style={{ fontWeight: 600 }}>{ins.product_type}</div>
-                    </div>
-                    <div>
-                      <span style={{ color: '#64748B' }}>Total Lot Qty:</span>
-                      <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{ins.ordered_quantity?.toLocaleString()} units</div>
-                    </div>
-                  </div>
-
-                  {/* If Re-inspection requested by admin */}
-                  {ins.status === 'Needs Re-inspection' && ins.admin_remarks && (
-                    <div style={{ backgroundColor: '#FEE2E2', borderLeft: '3px solid #DC2626', padding: '0.65rem 0.85rem', fontSize: '0.8rem', color: '#991B1B', marginBottom: '1rem' }}>
-                      <strong>Director Remarks:</strong> "{ins.admin_remarks}"
-                    </div>
+                {/* Actions Bar */}
+                <div style={{ padding: '0 1.15rem 1.15rem 1.15rem', display: 'flex', gap: '0.65rem', alignItems: 'center', justifyContent: 'space-between' }}>
+                  {ins.factory_map_url && (
+                    <a
+                      href={ins.factory_map_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-outline btn-sm"
+                      style={{ fontSize: '0.75rem' }}
+                    >
+                      <MapPin size={13} /> GPS Pin
+                    </a>
                   )}
 
-                  {/* Actions Bar */}
-                  <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', justifyContent: 'space-between' }}>
-                    {ins.factory_map_url && (
-                      <a
-                        href={ins.factory_map_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn btn-outline btn-sm"
-                        style={{ fontSize: '0.75rem' }}
-                      >
-                        <MapPin size={13} /> GPS Pin
-                      </a>
-                    )}
-
-                    <button
-                      onClick={() => setActiveSheetId(ins.id)}
-                      className={`btn ${ins.status === 'Needs Re-inspection' ? 'btn-danger' : 'btn-success'}`}
-                      style={{ flex: 1, justifyContent: 'center', fontWeight: 700 }}
-                    >
-                      <span>
-                        {ins.status === 'Not Started' ? 'Open & Start Audit' :
-                         ins.status === 'In Progress' || ins.status === 'Draft Saved' ? 'Resume Field Audit' :
-                         ins.status === 'Needs Re-inspection' ? 'Re-Inspect Sheet' :
-                         'View Inspection Sheet'}
-                      </span>
-                      <ChevronRight size={16} />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setActiveSheetId(ins.id)}
+                    className={`btn ${
+                      ['Submitted', 'Approved'].includes(ins.status) ? 'btn-outline' :
+                      ins.status === 'Needs Re-inspection' ? 'btn-danger' : 
+                      ins.status === 'Not Started' ? 'btn-success' : 'btn-primary'
+                    }`}
+                    style={{ 
+                      flex: 1, 
+                      justifyContent: 'center', 
+                      fontWeight: 700,
+                      color: ['Submitted', 'Approved'].includes(ins.status) ? '#166534' : undefined,
+                      borderColor: ['Submitted', 'Approved'].includes(ins.status) ? '#BBF7D0' : undefined,
+                      backgroundColor: ['Submitted', 'Approved'].includes(ins.status) ? '#F0FDF4' : undefined
+                    }}
+                  >
+                    <span>
+                      {ins.status === 'Not Started' ? 'Open & Start Audit' :
+                       ins.status === 'In Progress' || ins.status === 'Draft Saved' ? 'Resume Field Audit' :
+                       ins.status === 'Needs Re-inspection' ? 'Re-Inspect Sheet' :
+                       'View Sheet (Read-Only)'}
+                    </span>
+                    {['Submitted', 'Approved'].includes(ins.status) ? <Eye size={15} /> : <ChevronRight size={16} />}
+                  </button>
                 </div>
               </div>
-            ))
-          ) : (
-            <div style={{ textAlign: 'center', padding: '3.5rem 1rem', color: '#94A3B8', backgroundColor: '#FFFFFF', borderRadius: 'var(--radius-sm)', border: '1px solid #E2E8F0' }}>
-              <CheckCircle size={36} color="#10B981" style={{ margin: '0 auto 0.75rem auto' }} />
-              <p style={{ fontWeight: 600, color: '#334155' }}>All caught up!</p>
-              <p style={{ fontSize: '0.85rem', marginTop: '4px' }}>No inspections matching this tab filter.</p>
-            </div>
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );

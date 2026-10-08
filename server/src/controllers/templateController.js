@@ -156,7 +156,7 @@ async function createTemplate(req, res) {
           stringifyJSON(dimensional_config),
           stringifyJSON(sections_config),
           stringifyJSON(validation_config)
-        ]
+        ].map(p => (p === undefined ? null : p))
       );
       const templateId = resHeader.insertId;
 
@@ -178,9 +178,9 @@ async function createTemplate(req, res) {
               f.unit || null,
               f.is_required ? 1 : 0,
               optionsJson,
-              f.sort_order !== undefined ? f.sort_order : i + 1,
+              f.sort_order !== undefined && f.sort_order !== null ? f.sort_order : i + 1,
               f.help_text || null
-            ]
+            ].map(p => (p === undefined ? null : p))
           );
         }
       }
@@ -245,23 +245,23 @@ async function updateTemplate(req, res) {
           version = version + 1
         WHERE id = ?`,
         [
-          title,
-          product_type,
-          description,
-          is_active,
-          stringifyJSON(disposition_config),
-          stringifyJSON(auditor_config),
-          stringifyJSON(order_autofill_config),
-          stringifyJSON(sampling_plan_config),
-          stringifyJSON(defect_master_config),
-          stringifyJSON(severity_config),
-          stringifyJSON(calculations_config),
-          stringifyJSON(aql_config),
-          stringifyJSON(dimensional_config),
-          stringifyJSON(sections_config),
-          stringifyJSON(validation_config),
+          title !== undefined ? title : null,
+          product_type !== undefined ? product_type : null,
+          description !== undefined ? description : null,
+          is_active !== undefined ? is_active : null,
+          disposition_config !== undefined ? stringifyJSON(disposition_config) : null,
+          auditor_config !== undefined ? stringifyJSON(auditor_config) : null,
+          order_autofill_config !== undefined ? stringifyJSON(order_autofill_config) : null,
+          sampling_plan_config !== undefined ? stringifyJSON(sampling_plan_config) : null,
+          defect_master_config !== undefined ? stringifyJSON(defect_master_config) : null,
+          severity_config !== undefined ? stringifyJSON(severity_config) : null,
+          calculations_config !== undefined ? stringifyJSON(calculations_config) : null,
+          aql_config !== undefined ? stringifyJSON(aql_config) : null,
+          dimensional_config !== undefined ? stringifyJSON(dimensional_config) : null,
+          sections_config !== undefined ? stringifyJSON(sections_config) : null,
+          validation_config !== undefined ? stringifyJSON(validation_config) : null,
           id
-        ]
+        ].map(p => (p === undefined ? null : p))
       );
 
       // If fields are provided, replace them
@@ -278,14 +278,14 @@ async function updateTemplate(req, res) {
             [
               id,
               f.field_name || `field_${i + 1}`,
-              f.field_label || f.field_name,
+              f.field_label || f.field_name || `Field ${i + 1}`,
               f.field_type || 'numeric_defect',
               f.unit || null,
               f.is_required ? 1 : 0,
               optionsJson,
-              f.sort_order !== undefined ? f.sort_order : i + 1,
+              f.sort_order !== undefined && f.sort_order !== null ? f.sort_order : i + 1,
               f.help_text || null
-            ]
+            ].map(p => (p === undefined ? null : p))
           );
         }
       }

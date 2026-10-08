@@ -557,6 +557,9 @@ async function saveDraft(req, res) {
       if (s.status === 'Approved') {
         throw new Error('Cannot edit an approved inspection sheet.');
       }
+      if (user.role === 'employee' && s.status === 'Submitted') {
+        throw new Error('This inspection has already been submitted and cannot be edited. It is in read-only mode.');
+      }
 
       // Update sheet draft fields including all advanced structured JSONs
       await conn.execute(
@@ -679,6 +682,9 @@ async function submitInspection(req, res) {
       const s = rows[0];
       if (s.status === 'Approved') {
         throw new Error('This inspection sheet has already been approved and finalized.');
+      }
+      if (user.role === 'employee' && s.status === 'Submitted') {
+        throw new Error('This inspection sheet has already been submitted and finalized.');
       }
 
       // Determine Denominator (Sample Size)
@@ -916,6 +922,14 @@ async function uploadPhoto(req, res) {
 
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No photo uploaded.' });
+    }
+
+    // Check if inspection is already submitted or approved for employee
+    if (req.user && req.user.role === 'employee') {
+      const sheetRows = await query('SELECT status FROM inspection_sheets WHERE id = ?', [id]);
+      if (sheetRows.length > 0 && (sheetRows[0].status === 'Submitted' || sheetRows[0].status === 'Approved')) {
+        return res.status(403).json({ success: false, message: 'This inspection is locked in read-only mode. Photo evidence cannot be added.' });
+      }
     }
 
     const photoUrl = `/media/inspections/${req.file.filename}`;
