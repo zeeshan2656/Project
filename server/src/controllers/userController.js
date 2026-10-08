@@ -359,11 +359,74 @@ async function toggleUserStatus(req, res) {
   }
 }
 
+/**
+ * Admin: Get all administrator accounts
+ */
+async function getAdmins(req, res) {
+  try {
+    const admins = await query(
+      'SELECT id, role, name, email, plain_password, phone, status, created_at FROM users WHERE role = "admin" ORDER BY id ASC'
+    );
+    return res.json({
+      success: true,
+      admins
+    });
+  } catch (err) {
+    console.error('Error fetching admins:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch admin accounts.' });
+  }
+}
+
+/**
+ * Admin: Create another administrator account
+ */
+async function createAdmin(req, res) {
+  try {
+    const { name, email, password, phone } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, message: 'Name, email, and password are required.' });
+    }
+
+    const existing = await query('SELECT id FROM users WHERE email = ?', [email]);
+    if (existing.length > 0) {
+      return res.status(409).json({ success: false, message: 'Email is already registered.' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(password, salt);
+
+    const result = await query(
+      `INSERT INTO users (role, name, email, password_hash, plain_password, phone, status)
+       VALUES ('admin', ?, ?, ?, ?, ?, 'active')`,
+      [name, email, password_hash, password, phone || null]
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: `Admin account for ${name} created successfully.`,
+      admin: {
+        id: result.insertId,
+        role: 'admin',
+        name,
+        email,
+        plain_password: password,
+        phone,
+        status: 'active'
+      }
+    });
+  } catch (err) {
+    console.error('Error creating admin:', err);
+    return res.status(500).json({ success: false, message: 'Failed to create admin account.' });
+  }
+}
+
 module.exports = {
   getCustomers,
   createCustomer,
   getEmployees,
   createEmployee,
+  getAdmins,
+  createAdmin,
   updateUser,
   updateUserPassword,
   getCustomerDetailsAndOrders,

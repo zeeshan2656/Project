@@ -5,6 +5,8 @@ const {
   createCustomer,
   getEmployees,
   createEmployee,
+  getAdmins,
+  createAdmin,
   updateUser,
   updateUserPassword,
   getCustomerDetailsAndOrders,
@@ -20,6 +22,9 @@ router.get('/customers/:id/orders', authenticate, requireRole(['admin']), getCus
 router.get('/employees', authenticate, requireRole(['admin']), getEmployees);
 router.post('/employees', authenticate, requireRole(['admin']), createEmployee);
 router.get('/employees/:id/inspections', authenticate, requireRole(['admin']), getEmployeeDetailsAndInspections);
+
+router.get('/admins', authenticate, requireRole(['admin']), getAdmins);
+router.post('/admins', authenticate, requireRole(['admin']), createAdmin);
 
 router.put('/:id', authenticate, requireRole(['admin']), updateUser);
 router.put('/:id/password', authenticate, requireRole(['admin']), updateUserPassword);

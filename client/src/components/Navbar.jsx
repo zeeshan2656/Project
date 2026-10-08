@@ -25,7 +25,8 @@ import {
   Clock,
   CheckCircle,
   AlertTriangle,
-  Globe
+  Globe,
+  Key
 } from 'lucide-react';
 
 export function Navbar({ 
@@ -444,6 +445,17 @@ export function Navbar({
                         <div className="sidebar-nav-item-left">
                           <Settings size={18} />
                           <span>Website CMS &amp; Branding</span>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => handleAdminNav('security')}
+                        className={`sidebar-nav-item ${currentView === 'admin' && currentAdminTab === 'security' ? 'active' : ''}`}
+                        style={{ width: '100%' }}
+                      >
+                        <div className="sidebar-nav-item-left">
+                          <Key size={18} />
+                          <span>Admin User &amp; Password</span>
                         </div>
                       </button>
                     </>

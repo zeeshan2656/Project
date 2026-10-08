@@ -120,10 +120,16 @@ async function register(req, res) {
  */
 async function getMe(req, res) {
   try {
-    const user = req.user;
+    const rows = await query(
+      'SELECT id, role, name, email, plain_password, employee_code, company_name, city, country, phone, status, created_at FROM users WHERE id = ?',
+      [req.user.id]
+    );
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
     return res.json({
       success: true,
-      user
+      user: rows[0]
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Failed to retrieve profile.' });

@@ -97,6 +97,28 @@ export function AuthProvider({ children }) {
     window.dispatchEvent(new CustomEvent('apex:auth_logout'));
   };
 
+  const updateCurrentUser = (updatedFields) => {
+    setUser(prev => {
+      const merged = { ...prev, ...updatedFields };
+      localStorage.setItem('apex_user', JSON.stringify(merged));
+      return merged;
+    });
+  };
+
+  const refreshUser = async () => {
+    try {
+      const res = await authApi.getMe();
+      if (res && res.success && res.user) {
+        setUser(res.user);
+        localStorage.setItem('apex_user', JSON.stringify(res.user));
+        return res.user;
+      }
+    } catch (e) {
+      console.warn('Failed to refresh user:', e.message);
+    }
+    return null;
+  };
+
   const isAuthenticated = !!(user && token);
 
   return (
@@ -108,6 +130,8 @@ export function AuthProvider({ children }) {
       login, 
       register, 
       logout, 
+      updateCurrentUser,
+      refreshUser,
       loading 
     }}>
       {children}

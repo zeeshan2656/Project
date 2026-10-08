@@ -9,6 +9,7 @@ import { TemplateBuilder } from './TemplateBuilder';
 import { CustomerManagement } from './CustomerManagement';
 import { EmployeeManagement } from './EmployeeManagement';
 import { SiteSettingsCMS } from './SiteSettingsCMS';
+import { AdminProfileSecurity } from './AdminProfileSecurity';
 import { 
   Activity, 
   Layers, 
@@ -27,7 +28,8 @@ import {
   Menu,
   X,
   Globe,
-  Shield
+  Shield,
+  Key
 } from 'lucide-react';
 
 export function AdminDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen, onCloseMobileDrawer }) {
@@ -40,7 +42,7 @@ export function AdminDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen, on
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get('tab');
-      const validTabs = ['inspections', 'orders', 'templates', 'customers', 'employees', 'cms'];
+      const validTabs = ['inspections', 'orders', 'templates', 'customers', 'employees', 'cms', 'security'];
       if (tabParam && validTabs.includes(tabParam)) return tabParam;
       const saved = sessionStorage.getItem('admin_active_tab');
       if (saved && validTabs.includes(saved)) return saved;
@@ -74,7 +76,7 @@ export function AdminDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen, on
   useEffect(() => {
     const handleTabSync = (e) => {
       const targetTab = e?.detail || new URLSearchParams(window.location.search).get('tab');
-      if (targetTab && ['inspections', 'orders', 'templates', 'customers', 'employees', 'cms'].includes(targetTab)) {
+      if (targetTab && ['inspections', 'orders', 'templates', 'customers', 'employees', 'cms', 'security'].includes(targetTab)) {
         setActiveTab(targetTab);
       }
     };
@@ -166,6 +168,11 @@ export function AdminDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen, on
       id: 'cms',
       label: 'Website CMS & Branding',
       icon: Settings
+    },
+    {
+      id: 'security',
+      label: 'Admin User & Password',
+      icon: Key
     }
   ];
 
@@ -177,6 +184,7 @@ export function AdminDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen, on
       case 'customers': return 'USA Client Accounts & Brands';
       case 'employees': return 'Field QA Inspectors & Codes';
       case 'cms': return 'Website Branding & Content Management (CMS)';
+      case 'security': return 'Admin User, Password & Security';
       default: return 'QA Administration';
     }
   };
@@ -226,15 +234,20 @@ export function AdminDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen, on
           </nav>
         </div>
 
-        {/* Sidebar Footer: User Card */}
+        {/* Sidebar Footer: User Card (Quick access to Credentials) */}
         <div>
-          <div className="sidebar-user-card">
-            <div style={{ minWidth: 0 }}>
+          <div className="sidebar-user-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+            <div 
+              onClick={() => setActiveTab('security')}
+              style={{ minWidth: 0, cursor: 'pointer', flex: 1 }}
+              title="Click to view & change Admin user and password"
+            >
               <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {user?.name}
               </div>
-              <div style={{ fontSize: '0.725rem', color: '#94A3B8' }}>
-                Senior QA Director
+              <div style={{ fontSize: '0.72rem', color: '#38BDF8', display: 'flex', alignItems: 'center', gap: '3px', marginTop: '1px' }}>
+                <Key size={11} />
+                <span>Credentials &amp; Password</span>
               </div>
             </div>
             <button
@@ -342,6 +355,7 @@ export function AdminDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen, on
           {activeTab === 'customers' && <CustomerManagement onOpenPhoto={onOpenPhoto} />}
           {activeTab === 'employees' && <EmployeeManagement onOpenPhoto={onOpenPhoto} />}
           {activeTab === 'cms' && <SiteSettingsCMS />}
+          {activeTab === 'security' && <AdminProfileSecurity />}
         </div>
       </main>
     </div>
