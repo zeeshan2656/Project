@@ -26,7 +26,9 @@ import {
   CheckCircle,
   AlertTriangle,
   Globe,
-  Key
+  Key,
+  ChevronRight,
+  ExternalLink
 } from 'lucide-react';
 
 export function Navbar({ 
@@ -325,20 +327,10 @@ export function Navbar({
         <div className="mobile-toggle">
           <button
             onClick={handleToggle}
-            style={{ 
-              background: 'rgba(30, 41, 59, 0.6)', 
-              border: '1px solid rgba(255, 255, 255, 0.1)', 
-              borderRadius: '6px', 
-              color: '#FFFFFF', 
-              padding: '7px', 
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
+            className="mobile-hamburger-trigger"
             aria-label="Toggle navigation menu"
           >
-            {isDrawerOpen ? <X size={22} /> : <Menu size={22} />}
+            {isDrawerOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
       </div>
@@ -351,30 +343,42 @@ export function Navbar({
             {isAuthenticated ? (
               <>
                 <div className="dashboard-mobile-drawer-header">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    {user?.role === 'admin' ? (
-                      <>
-                        <Shield size={18} color="#38BDF8" />
-                        <span style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.95rem' }}>Admin Control Menu</span>
-                      </>
-                    ) : user?.role === 'customer' ? (
-                      <>
-                        <Building size={18} color="#38BDF8" />
-                        <span style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.95rem' }}>Client Portal Menu</span>
-                      </>
-                    ) : (
-                      <>
-                        <HardHat size={18} color="#10B981" />
-                        <span style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.95rem' }}>Field Inspector Menu</span>
-                      </>
-                    )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <div 
+                      style={{ 
+                        width: '32px', 
+                        height: '32px', 
+                        borderRadius: '8px', 
+                        background: user?.role === 'employee' ? 'rgba(16, 185, 129, 0.18)' : 'rgba(56, 189, 248, 0.18)',
+                        border: `1px solid ${user?.role === 'employee' ? 'rgba(16, 185, 129, 0.35)' : 'rgba(56, 189, 248, 0.35)'}`,
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center' 
+                      }}
+                    >
+                      {user?.role === 'admin' ? (
+                        <Shield size={17} color="#38BDF8" />
+                      ) : user?.role === 'customer' ? (
+                        <Building size={17} color="#38BDF8" />
+                      ) : (
+                        <HardHat size={17} color="#10B981" />
+                      )}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.9rem', lineHeight: 1.2 }}>
+                        {user?.role === 'admin' ? 'Admin Console' : user?.role === 'customer' ? 'Buyer Portal' : 'Auditor Workspace'}
+                      </div>
+                      <div style={{ fontSize: '0.66rem', color: '#38BDF8', fontWeight: 700, letterSpacing: '0.05em' }}>
+                        NAVIGATION MENU
+                      </div>
+                    </div>
                   </div>
                   <button 
                     onClick={handleClose} 
-                    style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '4px' }}
+                    className="mobile-drawer-close-btn"
                     aria-label="Close menu"
                   >
-                    <X size={20} />
+                    <X size={17} />
                   </button>
                 </div>
 
@@ -382,81 +386,161 @@ export function Navbar({
                   {/* ADMIN NAVIGATION */}
                   {user?.role === 'admin' && (
                     <>
+                      <div className="mobile-menu-section-label">OPERATIONS &amp; AUDITS</div>
                       <button
+                        type="button"
                         onClick={() => handleAdminNav('inspections')}
-                        className={`sidebar-nav-item ${currentView === 'admin' && currentAdminTab === 'inspections' ? 'active' : ''}`}
-                        style={{ width: '100%' }}
+                        className={`mobile-menu-item-btn ${currentView === 'admin' && currentAdminTab === 'inspections' ? 'active' : ''}`}
                       >
-                        <div className="sidebar-nav-item-left">
-                          <ClipboardCheck size={18} />
-                          <span>Inspection Telemetry</span>
+                        <div 
+                          className="mobile-menu-item-icon-box"
+                          style={{
+                            background: currentView === 'admin' && currentAdminTab === 'inspections' ? 'linear-gradient(135deg, #0284C7, #2563EB)' : 'rgba(56, 189, 248, 0.14)',
+                            color: currentView === 'admin' && currentAdminTab === 'inspections' ? '#FFFFFF' : '#38BDF8',
+                            border: `1px solid ${currentView === 'admin' && currentAdminTab === 'inspections' ? 'transparent' : 'rgba(56, 189, 248, 0.28)'}`
+                          }}
+                        >
+                          <ClipboardCheck size={18} strokeWidth={currentView === 'admin' && currentAdminTab === 'inspections' ? 2.5 : 2} />
                         </div>
+                        <div className="mobile-menu-item-content">
+                          <span className="mobile-menu-item-title">Inspection Telemetry</span>
+                          <span className="mobile-menu-item-subtitle">Live inspection records &amp; field audits</span>
+                        </div>
+                        <ChevronRight size={16} className="mobile-menu-item-chevron" />
                       </button>
 
                       <button
+                        type="button"
                         onClick={() => handleAdminNav('orders')}
-                        className={`sidebar-nav-item ${currentView === 'admin' && currentAdminTab === 'orders' ? 'active' : ''}`}
-                        style={{ width: '100%' }}
+                        className={`mobile-menu-item-btn ${currentView === 'admin' && currentAdminTab === 'orders' ? 'active' : ''}`}
                       >
-                        <div className="sidebar-nav-item-left">
-                          <FileText size={18} />
-                          <span>Purchase Orders</span>
+                        <div 
+                          className="mobile-menu-item-icon-box"
+                          style={{
+                            background: currentView === 'admin' && currentAdminTab === 'orders' ? 'linear-gradient(135deg, #0284C7, #2563EB)' : 'rgba(59, 130, 246, 0.14)',
+                            color: currentView === 'admin' && currentAdminTab === 'orders' ? '#FFFFFF' : '#60A5FA',
+                            border: `1px solid ${currentView === 'admin' && currentAdminTab === 'orders' ? 'transparent' : 'rgba(59, 130, 246, 0.28)'}`
+                          }}
+                        >
+                          <FileText size={18} strokeWidth={currentView === 'admin' && currentAdminTab === 'orders' ? 2.5 : 2} />
                         </div>
+                        <div className="mobile-menu-item-content">
+                          <span className="mobile-menu-item-title">Purchase Orders</span>
+                          <span className="mobile-menu-item-subtitle">PO tracking &amp; client assignments</span>
+                        </div>
+                        <ChevronRight size={16} className="mobile-menu-item-chevron" />
                       </button>
 
                       <button
+                        type="button"
                         onClick={() => handleAdminNav('templates')}
-                        className={`sidebar-nav-item ${currentView === 'admin' && currentAdminTab === 'templates' ? 'active' : ''}`}
-                        style={{ width: '100%' }}
+                        className={`mobile-menu-item-btn ${currentView === 'admin' && currentAdminTab === 'templates' ? 'active' : ''}`}
                       >
-                        <div className="sidebar-nav-item-left">
-                          <Layers size={18} />
-                          <span>Inspection Templates</span>
+                        <div 
+                          className="mobile-menu-item-icon-box"
+                          style={{
+                            background: currentView === 'admin' && currentAdminTab === 'templates' ? 'linear-gradient(135deg, #8B5CF6, #6D28D9)' : 'rgba(168, 85, 247, 0.14)',
+                            color: currentView === 'admin' && currentAdminTab === 'templates' ? '#FFFFFF' : '#C084FC',
+                            border: `1px solid ${currentView === 'admin' && currentAdminTab === 'templates' ? 'transparent' : 'rgba(168, 85, 247, 0.28)'}`
+                          }}
+                        >
+                          <Layers size={18} strokeWidth={currentView === 'admin' && currentAdminTab === 'templates' ? 2.5 : 2} />
                         </div>
+                        <div className="mobile-menu-item-content">
+                          <span className="mobile-menu-item-title">Inspection Templates</span>
+                          <span className="mobile-menu-item-subtitle">AQL criteria, sampling &amp; defect catalogs</span>
+                        </div>
+                        <ChevronRight size={16} className="mobile-menu-item-chevron" />
                       </button>
 
+                      <div className="mobile-menu-section-label">MANAGEMENT &amp; PLATFORM</div>
                       <button
+                        type="button"
                         onClick={() => handleAdminNav('customers')}
-                        className={`sidebar-nav-item ${currentView === 'admin' && currentAdminTab === 'customers' ? 'active' : ''}`}
-                        style={{ width: '100%' }}
+                        className={`mobile-menu-item-btn ${currentView === 'admin' && currentAdminTab === 'customers' ? 'active' : ''}`}
                       >
-                        <div className="sidebar-nav-item-left">
-                          <Users size={18} />
-                          <span>USA Clients &amp; Brands</span>
+                        <div 
+                          className="mobile-menu-item-icon-box"
+                          style={{
+                            background: currentView === 'admin' && currentAdminTab === 'customers' ? 'linear-gradient(135deg, #EC4899, #BE185D)' : 'rgba(244, 114, 182, 0.14)',
+                            color: currentView === 'admin' && currentAdminTab === 'customers' ? '#FFFFFF' : '#F472B6',
+                            border: `1px solid ${currentView === 'admin' && currentAdminTab === 'customers' ? 'transparent' : 'rgba(244, 114, 182, 0.28)'}`
+                          }}
+                        >
+                          <Users size={18} strokeWidth={currentView === 'admin' && currentAdminTab === 'customers' ? 2.5 : 2} />
                         </div>
+                        <div className="mobile-menu-item-content">
+                          <span className="mobile-menu-item-title">USA Clients &amp; Brands</span>
+                          <span className="mobile-menu-item-subtitle">Buyer directory &amp; security access</span>
+                        </div>
+                        <ChevronRight size={16} className="mobile-menu-item-chevron" />
                       </button>
 
                       <button
+                        type="button"
                         onClick={() => handleAdminNav('employees')}
-                        className={`sidebar-nav-item ${currentView === 'admin' && currentAdminTab === 'employees' ? 'active' : ''}`}
-                        style={{ width: '100%' }}
+                        className={`mobile-menu-item-btn ${currentView === 'admin' && currentAdminTab === 'employees' ? 'active' : ''}`}
                       >
-                        <div className="sidebar-nav-item-left">
-                          <HardHat size={18} />
-                          <span>Field Inspectors</span>
+                        <div 
+                          className="mobile-menu-item-icon-box"
+                          style={{
+                            background: currentView === 'admin' && currentAdminTab === 'employees' ? 'linear-gradient(135deg, #F59E0B, #D97706)' : 'rgba(251, 191, 36, 0.14)',
+                            color: currentView === 'admin' && currentAdminTab === 'employees' ? '#FFFFFF' : '#FBBF24',
+                            border: `1px solid ${currentView === 'admin' && currentAdminTab === 'employees' ? 'transparent' : 'rgba(251, 191, 36, 0.28)'}`
+                          }}
+                        >
+                          <HardHat size={18} strokeWidth={currentView === 'admin' && currentAdminTab === 'employees' ? 2.5 : 2} />
                         </div>
+                        <div className="mobile-menu-item-content">
+                          <span className="mobile-menu-item-title">Field Inspectors</span>
+                          <span className="mobile-menu-item-subtitle">Auditor roster &amp; GPS credentials</span>
+                        </div>
+                        <ChevronRight size={16} className="mobile-menu-item-chevron" />
                       </button>
 
                       <button
+                        type="button"
                         onClick={() => handleAdminNav('cms')}
-                        className={`sidebar-nav-item ${currentView === 'admin' && currentAdminTab === 'cms' ? 'active' : ''}`}
-                        style={{ width: '100%' }}
+                        className={`mobile-menu-item-btn ${currentView === 'admin' && currentAdminTab === 'cms' ? 'active' : ''}`}
                       >
-                        <div className="sidebar-nav-item-left">
-                          <Settings size={18} />
-                          <span>Website CMS &amp; Branding</span>
+                        <div 
+                          className="mobile-menu-item-icon-box"
+                          style={{
+                            background: currentView === 'admin' && currentAdminTab === 'cms' ? 'linear-gradient(135deg, #10B981, #059669)' : 'rgba(52, 211, 153, 0.14)',
+                            color: currentView === 'admin' && currentAdminTab === 'cms' ? '#FFFFFF' : '#34D399',
+                            border: `1px solid ${currentView === 'admin' && currentAdminTab === 'cms' ? 'transparent' : 'rgba(52, 211, 153, 0.28)'}`
+                          }}
+                        >
+                          <Settings size={18} strokeWidth={currentView === 'admin' && currentAdminTab === 'cms' ? 2.5 : 2} />
                         </div>
+                        <div className="mobile-menu-item-content">
+                          <span className="mobile-menu-item-title">Website CMS &amp; Branding</span>
+                          <span className="mobile-menu-item-subtitle">Landing page content &amp; public portal</span>
+                        </div>
+                        <ChevronRight size={16} className="mobile-menu-item-chevron" />
                       </button>
 
+                      <div className="mobile-menu-section-label">SECURITY &amp; ACCESS</div>
                       <button
+                        type="button"
                         onClick={() => handleAdminNav('security')}
-                        className={`sidebar-nav-item ${currentView === 'admin' && currentAdminTab === 'security' ? 'active' : ''}`}
-                        style={{ width: '100%' }}
+                        className={`mobile-menu-item-btn ${currentView === 'admin' && currentAdminTab === 'security' ? 'active' : ''}`}
                       >
-                        <div className="sidebar-nav-item-left">
-                          <Key size={18} />
-                          <span>Admin User &amp; Password</span>
+                        <div 
+                          className="mobile-menu-item-icon-box"
+                          style={{
+                            background: currentView === 'admin' && currentAdminTab === 'security' ? 'linear-gradient(135deg, #EF4444, #B91C1C)' : 'rgba(239, 68, 68, 0.14)',
+                            color: currentView === 'admin' && currentAdminTab === 'security' ? '#FFFFFF' : '#F87171',
+                            border: `1px solid ${currentView === 'admin' && currentAdminTab === 'security' ? 'transparent' : 'rgba(239, 68, 68, 0.28)'}`
+                          }}
+                        >
+                          <Key size={18} strokeWidth={currentView === 'admin' && currentAdminTab === 'security' ? 2.5 : 2} />
                         </div>
+                        <div className="mobile-menu-item-content">
+                          <span className="mobile-menu-item-title">Admin User &amp; Password</span>
+                          <span className="mobile-menu-item-subtitle">Master credentials &amp; login security</span>
+                        </div>
+                        <ChevronRight size={16} className="mobile-menu-item-chevron" />
                       </button>
                     </>
                   )}
@@ -464,258 +548,453 @@ export function Navbar({
                   {/* CUSTOMER NAVIGATION */}
                   {user?.role === 'customer' && (
                     <>
+                      <div className="mobile-menu-section-label">PURCHASE ORDERS</div>
                       <button
+                        type="button"
                         onClick={() => handleCustomerNav('all')}
-                        className={`sidebar-nav-item ${currentView === 'customer' && currentCustomerMenu === 'all' ? 'active' : ''}`}
-                        style={{ width: '100%' }}
+                        className={`mobile-menu-item-btn ${currentView === 'customer' && currentCustomerMenu === 'all' ? 'active' : ''}`}
                       >
-                        <div className="sidebar-nav-item-left">
-                          <FileText size={18} />
-                          <span>All Purchase Orders</span>
-                        </div>
-                      </button>
-
-                      <button
-                        onClick={() => handleCustomerNav('active')}
-                        className={`sidebar-nav-item ${currentView === 'customer' && currentCustomerMenu === 'active' ? 'active' : ''}`}
-                        style={{ width: '100%' }}
-                      >
-                        <div className="sidebar-nav-item-left">
-                          <Clock size={18} />
-                          <span>Under Inspection</span>
-                        </div>
-                      </button>
-
-                      <button
-                        onClick={() => handleCustomerNav('approved')}
-                        className={`sidebar-nav-item ${currentView === 'customer' && currentCustomerMenu === 'approved' ? 'active' : ''}`}
-                        style={{ width: '100%' }}
-                      >
-                        <div className="sidebar-nav-item-left">
-                          <CheckCircle size={18} />
-                          <span>Certified &amp; Approved</span>
-                        </div>
-                      </button>
-
-                      <div style={{ marginTop: '0.65rem' }}>
-                        <a
-                          href={whatsappLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="btn btn-success btn-sm"
-                          style={{ width: '100%', justifyContent: 'center' }}
+                        <div 
+                          className="mobile-menu-item-icon-box"
+                          style={{
+                            background: currentView === 'customer' && currentCustomerMenu === 'all' ? 'linear-gradient(135deg, #0284C7, #2563EB)' : 'rgba(56, 189, 248, 0.14)',
+                            color: currentView === 'customer' && currentCustomerMenu === 'all' ? '#FFFFFF' : '#38BDF8',
+                            border: `1px solid ${currentView === 'customer' && currentCustomerMenu === 'all' ? 'transparent' : 'rgba(56, 189, 248, 0.28)'}`
+                          }}
                         >
-                          <MessageCircle size={14} />
-                          <span>Chat QA Lead</span>
-                        </a>
-                      </div>
+                          <FileText size={18} strokeWidth={currentView === 'customer' && currentCustomerMenu === 'all' ? 2.5 : 2} />
+                        </div>
+                        <div className="mobile-menu-item-content">
+                          <span className="mobile-menu-item-title">All Purchase Orders</span>
+                          <span className="mobile-menu-item-subtitle">Track active &amp; completed buyer POs</span>
+                        </div>
+                        <ChevronRight size={16} className="mobile-menu-item-chevron" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleCustomerNav('active')}
+                        className={`mobile-menu-item-btn ${currentView === 'customer' && currentCustomerMenu === 'active' ? 'active' : ''}`}
+                      >
+                        <div 
+                          className="mobile-menu-item-icon-box"
+                          style={{
+                            background: currentView === 'customer' && currentCustomerMenu === 'active' ? 'linear-gradient(135deg, #F59E0B, #D97706)' : 'rgba(251, 191, 36, 0.14)',
+                            color: currentView === 'customer' && currentCustomerMenu === 'active' ? '#FFFFFF' : '#FBBF24',
+                            border: `1px solid ${currentView === 'customer' && currentCustomerMenu === 'active' ? 'transparent' : 'rgba(251, 191, 36, 0.28)'}`
+                          }}
+                        >
+                          <Clock size={18} strokeWidth={currentView === 'customer' && currentCustomerMenu === 'active' ? 2.5 : 2} />
+                        </div>
+                        <div className="mobile-menu-item-content">
+                          <span className="mobile-menu-item-title">Under Inspection</span>
+                          <span className="mobile-menu-item-subtitle">Real-time ongoing factory audits</span>
+                        </div>
+                        <ChevronRight size={16} className="mobile-menu-item-chevron" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleCustomerNav('approved')}
+                        className={`mobile-menu-item-btn ${currentView === 'customer' && currentCustomerMenu === 'approved' ? 'active' : ''}`}
+                      >
+                        <div 
+                          className="mobile-menu-item-icon-box"
+                          style={{
+                            background: currentView === 'customer' && currentCustomerMenu === 'approved' ? 'linear-gradient(135deg, #10B981, #059669)' : 'rgba(52, 211, 153, 0.14)',
+                            color: currentView === 'customer' && currentCustomerMenu === 'approved' ? '#FFFFFF' : '#34D399',
+                            border: `1px solid ${currentView === 'customer' && currentCustomerMenu === 'approved' ? 'transparent' : 'rgba(52, 211, 153, 0.28)'}`
+                          }}
+                        >
+                          <CheckCircle size={18} strokeWidth={currentView === 'customer' && currentCustomerMenu === 'approved' ? 2.5 : 2} />
+                        </div>
+                        <div className="mobile-menu-item-content">
+                          <span className="mobile-menu-item-title">Certified &amp; Approved</span>
+                          <span className="mobile-menu-item-subtitle">Finalized QA sign-off certificates</span>
+                        </div>
+                        <ChevronRight size={16} className="mobile-menu-item-chevron" />
+                      </button>
+
+                      <div className="mobile-menu-section-label">DIRECT QA ASSISTANCE</div>
+                      <a
+                        href={whatsappLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mobile-menu-action-btn whatsapp-cta"
+                      >
+                        <div className="whatsapp-ping-dot" />
+                        <MessageCircle size={18} />
+                        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.86rem', color: '#FFFFFF' }}>Chat with QA Lead</span>
+                          <span style={{ fontSize: '0.7rem', color: '#86EFAC' }}>Direct WhatsApp Assistance (24/7)</span>
+                        </div>
+                        <ExternalLink size={14} style={{ opacity: 0.7 }} />
+                      </a>
                     </>
                   )}
 
                   {/* EMPLOYEE NAVIGATION */}
                   {user?.role === 'employee' && (
                     <>
+                      <div className="mobile-menu-section-label">INSPECTION TASKS</div>
                       <button
+                        type="button"
                         onClick={() => handleEmployeeNav('active')}
-                        className={`sidebar-nav-item ${currentView === 'employee' && currentEmployeeFilter === 'active' ? 'active' : ''}`}
-                        style={{ width: '100%' }}
+                        className={`mobile-menu-item-btn ${currentView === 'employee' && currentEmployeeFilter === 'active' ? 'active' : ''}`}
                       >
-                        <div className="sidebar-nav-item-left">
-                          <ListTodo size={18} />
-                          <span>Active Field Tasks</span>
+                        <div 
+                          className="mobile-menu-item-icon-box"
+                          style={{
+                            background: currentView === 'employee' && currentEmployeeFilter === 'active' ? 'linear-gradient(135deg, #0284C7, #2563EB)' : 'rgba(56, 189, 248, 0.14)',
+                            color: currentView === 'employee' && currentEmployeeFilter === 'active' ? '#FFFFFF' : '#38BDF8',
+                            border: `1px solid ${currentView === 'employee' && currentEmployeeFilter === 'active' ? 'transparent' : 'rgba(56, 189, 248, 0.28)'}`
+                          }}
+                        >
+                          <ListTodo size={18} strokeWidth={currentView === 'employee' && currentEmployeeFilter === 'active' ? 2.5 : 2} />
                         </div>
+                        <div className="mobile-menu-item-content">
+                          <span className="mobile-menu-item-title">Active Field Tasks</span>
+                          <span className="mobile-menu-item-subtitle">Assigned &amp; in-progress audits</span>
+                        </div>
+                        <ChevronRight size={16} className="mobile-menu-item-chevron" />
                       </button>
 
                       <button
+                        type="button"
                         onClick={() => handleEmployeeNav('reinspection')}
-                        className={`sidebar-nav-item ${currentView === 'employee' && currentEmployeeFilter === 'reinspection' ? 'active' : ''}`}
-                        style={{ width: '100%', color: currentEmployeeFilter === 'reinspection' ? '#F87171' : '#EF4444' }}
+                        className={`mobile-menu-item-btn danger-state ${currentView === 'employee' && currentEmployeeFilter === 'reinspection' ? 'active' : ''}`}
                       >
-                        <div className="sidebar-nav-item-left">
-                          <AlertTriangle size={18} />
-                          <span>Re-Inspections</span>
+                        <div 
+                          className="mobile-menu-item-icon-box"
+                          style={{
+                            background: currentView === 'employee' && currentEmployeeFilter === 'reinspection' ? 'linear-gradient(135deg, #EF4444, #B91C1C)' : 'rgba(239, 68, 68, 0.14)',
+                            color: currentView === 'employee' && currentEmployeeFilter === 'reinspection' ? '#FFFFFF' : '#F87171',
+                            border: `1px solid ${currentView === 'employee' && currentEmployeeFilter === 'reinspection' ? 'transparent' : 'rgba(239, 68, 68, 0.28)'}`
+                          }}
+                        >
+                          <AlertTriangle size={18} strokeWidth={currentView === 'employee' && currentEmployeeFilter === 'reinspection' ? 2.5 : 2} />
                         </div>
+                        <div className="mobile-menu-item-content">
+                          <span className="mobile-menu-item-title" style={{ color: currentView === 'employee' && currentEmployeeFilter === 'reinspection' ? '#F87171' : '#F87171' }}>
+                            Needs Re-Inspection
+                          </span>
+                          <span className="mobile-menu-item-subtitle">Returned by QA Director for rework</span>
+                        </div>
+                        <ChevronRight size={16} className="mobile-menu-item-chevron" />
                       </button>
 
                       <button
+                        type="button"
                         onClick={() => handleEmployeeNav('submitted')}
-                        className={`sidebar-nav-item ${currentView === 'employee' && currentEmployeeFilter === 'submitted' ? 'active' : ''}`}
-                        style={{ width: '100%' }}
+                        className={`mobile-menu-item-btn ${currentView === 'employee' && currentEmployeeFilter === 'submitted' ? 'active' : ''}`}
                       >
-                        <div className="sidebar-nav-item-left">
-                          <Clock size={18} />
-                          <span>Submitted / In Review</span>
+                        <div 
+                          className="mobile-menu-item-icon-box"
+                          style={{
+                            background: currentView === 'employee' && currentEmployeeFilter === 'submitted' ? 'linear-gradient(135deg, #F59E0B, #D97706)' : 'rgba(251, 191, 36, 0.14)',
+                            color: currentView === 'employee' && currentEmployeeFilter === 'submitted' ? '#FFFFFF' : '#FBBF24',
+                            border: `1px solid ${currentView === 'employee' && currentEmployeeFilter === 'submitted' ? 'transparent' : 'rgba(251, 191, 36, 0.28)'}`
+                          }}
+                        >
+                          <Clock size={18} strokeWidth={currentView === 'employee' && currentEmployeeFilter === 'submitted' ? 2.5 : 2} />
                         </div>
+                        <div className="mobile-menu-item-content">
+                          <span className="mobile-menu-item-title">Submitted / In Review</span>
+                          <span className="mobile-menu-item-subtitle">Finalized audits awaiting sign-off (Locked)</span>
+                        </div>
+                        <ChevronRight size={16} className="mobile-menu-item-chevron" />
                       </button>
 
                       <button
+                        type="button"
                         onClick={() => handleEmployeeNav('approved')}
-                        className={`sidebar-nav-item ${currentView === 'employee' && currentEmployeeFilter === 'approved' ? 'active' : ''}`}
-                        style={{ width: '100%' }}
+                        className={`mobile-menu-item-btn ${currentView === 'employee' && currentEmployeeFilter === 'approved' ? 'active' : ''}`}
                       >
-                        <div className="sidebar-nav-item-left">
-                          <CheckCircle size={18} />
-                          <span>Approved Audits</span>
+                        <div 
+                          className="mobile-menu-item-icon-box"
+                          style={{
+                            background: currentView === 'employee' && currentEmployeeFilter === 'approved' ? 'linear-gradient(135deg, #10B981, #059669)' : 'rgba(52, 211, 153, 0.14)',
+                            color: currentView === 'employee' && currentEmployeeFilter === 'approved' ? '#FFFFFF' : '#34D399',
+                            border: `1px solid ${currentView === 'employee' && currentEmployeeFilter === 'approved' ? 'transparent' : 'rgba(52, 211, 153, 0.28)'}`
+                          }}
+                        >
+                          <CheckCircle size={18} strokeWidth={currentView === 'employee' && currentEmployeeFilter === 'approved' ? 2.5 : 2} />
                         </div>
+                        <div className="mobile-menu-item-content">
+                          <span className="mobile-menu-item-title">Approved Audits</span>
+                          <span className="mobile-menu-item-subtitle">Certified pass inspections</span>
+                        </div>
+                        <ChevronRight size={16} className="mobile-menu-item-chevron" />
                       </button>
 
                       <button
+                        type="button"
                         onClick={() => handleEmployeeNav('all')}
-                        className={`sidebar-nav-item ${currentView === 'employee' && currentEmployeeFilter === 'all' ? 'active' : ''}`}
-                        style={{ width: '100%' }}
+                        className={`mobile-menu-item-btn ${currentView === 'employee' && currentEmployeeFilter === 'all' ? 'active' : ''}`}
                       >
-                        <div className="sidebar-nav-item-left">
-                          <FileCheck size={18} />
-                          <span>All Task History</span>
+                        <div 
+                          className="mobile-menu-item-icon-box"
+                          style={{
+                            background: currentView === 'employee' && currentEmployeeFilter === 'all' ? 'linear-gradient(135deg, #6366F1, #4F46E5)' : 'rgba(99, 102, 241, 0.14)',
+                            color: currentView === 'employee' && currentEmployeeFilter === 'all' ? '#FFFFFF' : '#818CF8',
+                            border: `1px solid ${currentView === 'employee' && currentEmployeeFilter === 'all' ? 'transparent' : 'rgba(99, 102, 241, 0.28)'}`
+                          }}
+                        >
+                          <FileCheck size={18} strokeWidth={currentView === 'employee' && currentEmployeeFilter === 'all' ? 2.5 : 2} />
                         </div>
+                        <div className="mobile-menu-item-content">
+                          <span className="mobile-menu-item-title">All Task History</span>
+                          <span className="mobile-menu-item-subtitle">Complete log of your assigned audits</span>
+                        </div>
+                        <ChevronRight size={16} className="mobile-menu-item-chevron" />
                       </button>
                     </>
                   )}
 
                   {/* Public Site View Link / Back to Dashboard */}
-                  <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid #1E293B' }}>
+                  <div style={{ marginTop: '0.65rem', paddingTop: '0.65rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
                     {currentView !== 'landing' ? (
                       <button
+                        type="button"
                         onClick={handlePublicWebNav}
-                        className="btn btn-outline btn-sm"
-                        style={{ width: '100%', justifyContent: 'center', color: '#38BDF8', borderColor: 'rgba(56, 189, 248, 0.35)', gap: '6px' }}
+                        className="mobile-menu-action-btn public-web"
                       >
-                        <Globe size={15} />
-                        <span>Visit Public Website</span>
+                        <Globe size={16} />
+                        <span style={{ flex: 1 }}>Visit Public Website</span>
+                        <ExternalLink size={14} style={{ opacity: 0.6 }} />
                       </button>
                     ) : (
                       <button
+                        type="button"
                         onClick={() => {
                           handleClose();
                           onNavigate(user?.role || 'admin');
                         }}
-                        className="btn btn-accent btn-sm"
-                        style={{ width: '100%', justifyContent: 'center', gap: '6px' }}
+                        className="mobile-menu-action-btn back-dashboard"
                       >
-                        <LayoutDashboard size={15} />
-                        <span>Back to {getDashboardLabel()}</span>
+                        <LayoutDashboard size={16} />
+                        <span style={{ flex: 1 }}>Back to {getDashboardLabel()}</span>
+                        <ChevronRight size={16} />
                       </button>
                     )}
                   </div>
                 </nav>
 
                 {/* Logged in User Card Footer */}
-                <div style={{ padding: '1rem', borderTop: '1px solid #1E293B', marginTop: 'auto', backgroundColor: '#090D16' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ minWidth: 0, paddingRight: '0.5rem' }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div className="mobile-drawer-user-card">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0, flex: 1 }}>
+                    <div className="mobile-drawer-user-avatar">
+                      {user?.role === 'admin' ? (
+                        <Shield size={18} color="#38BDF8" />
+                      ) : user?.role === 'customer' ? (
+                        <Building size={18} color="#38BDF8" />
+                      ) : (
+                        <HardHat size={18} color="#10B981" />
+                      )}
+                      <div className="mobile-drawer-user-online-dot" />
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.86rem', color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {user?.name}
                       </div>
-                      <div style={{ fontSize: '0.72rem', color: '#94A3B8' }}>
+                      <div style={{ fontSize: '0.71rem', color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {user?.role === 'admin' ? 'Senior QA Director' : user?.role === 'customer' ? (user?.company_name || 'USA Buyer') : (user?.employee_code || 'QA Inspector')}
                       </div>
                     </div>
-                    <button 
-                      onClick={handleLogout} 
-                      className="btn btn-ghost btn-sm" 
-                      style={{ color: '#EF4444', gap: '4px', whiteSpace: 'nowrap' }}
-                      title="Sign Out"
-                    >
-                      <LogOut size={16} /> Logout
-                    </button>
                   </div>
+                  <button 
+                    onClick={handleLogout} 
+                    className="mobile-menu-logout-btn"
+                    title="Sign Out"
+                  >
+                    <LogOut size={14} />
+                    <span>Logout</span>
+                  </button>
                 </div>
               </>
             ) : (
               /* 2. If Visitor / Logged Out: Marketing & Landing Drawer */
               <>
                 <div className="dashboard-mobile-drawer-header">
-                  <span style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.95rem' }}>Navigation</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <div 
+                      style={{ 
+                        width: '32px', 
+                        height: '32px', 
+                        borderRadius: '8px', 
+                        background: 'linear-gradient(135deg, #0284C7 0%, #2563EB 100%)', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 8px rgba(37, 99, 235, 0.4)'
+                      }}
+                    >
+                      <ShieldCheck size={18} color="#FFFFFF" />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '0.9rem', lineHeight: 1.2 }}>
+                        {companyName}
+                      </div>
+                      <div style={{ fontSize: '0.66rem', color: '#38BDF8', fontWeight: 700, letterSpacing: '0.05em' }}>
+                        INSPECTION PLATFORM
+                      </div>
+                    </div>
+                  </div>
                   <button 
                     onClick={handleClose} 
-                    style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '4px' }}
+                    className="mobile-drawer-close-btn"
                     aria-label="Close menu"
                   >
-                    <X size={20} />
+                    <X size={17} />
                   </button>
                 </div>
 
                 <nav className="dashboard-mobile-drawer-nav">
+                  <div className="mobile-menu-section-label">EXPLORE PLATFORM</div>
                   <button 
+                    type="button"
                     onClick={() => handleNavClick('landing')}
-                    className={`sidebar-nav-item ${currentView === 'landing' ? 'active' : ''}`}
-                    style={{ width: '100%' }}
+                    className={`mobile-menu-item-btn ${currentView === 'landing' ? 'active' : ''}`}
                   >
-                    <div className="sidebar-nav-item-left">
-                      <Home size={18} />
-                      <span>Home</span>
+                    <div 
+                      className="mobile-menu-item-icon-box"
+                      style={{
+                        background: currentView === 'landing' ? 'linear-gradient(135deg, #0284C7, #2563EB)' : 'rgba(56, 189, 248, 0.14)',
+                        color: currentView === 'landing' ? '#FFFFFF' : '#38BDF8',
+                        border: `1px solid ${currentView === 'landing' ? 'transparent' : 'rgba(56, 189, 248, 0.28)'}`
+                      }}
+                    >
+                      <Home size={18} strokeWidth={currentView === 'landing' ? 2.5 : 2} />
                     </div>
+                    <div className="mobile-menu-item-content">
+                      <span className="mobile-menu-item-title">Home</span>
+                      <span className="mobile-menu-item-subtitle">Platform overview &amp; standards</span>
+                    </div>
+                    <ChevronRight size={16} className="mobile-menu-item-chevron" />
                   </button>
+
                   <button 
+                    type="button"
                     onClick={() => handleNavClick('#services')}
-                    className="sidebar-nav-item"
-                    style={{ width: '100%' }}
+                    className="mobile-menu-item-btn"
                   >
-                    <div className="sidebar-nav-item-left">
+                    <div 
+                      className="mobile-menu-item-icon-box"
+                      style={{
+                        background: 'rgba(99, 102, 241, 0.14)',
+                        color: '#818CF8',
+                        border: '1px solid rgba(99, 102, 241, 0.28)'
+                      }}
+                    >
                       <Layers size={18} />
-                      <span>Services</span>
                     </div>
+                    <div className="mobile-menu-item-content">
+                      <span className="mobile-menu-item-title">Inspection Services</span>
+                      <span className="mobile-menu-item-subtitle">Pre-shipment, inline &amp; container loading</span>
+                    </div>
+                    <ChevronRight size={16} className="mobile-menu-item-chevron" />
                   </button>
+
                   <button 
+                    type="button"
                     onClick={() => handleNavClick('#process')}
-                    className="sidebar-nav-item"
-                    style={{ width: '100%' }}
+                    className="mobile-menu-item-btn"
                   >
-                    <div className="sidebar-nav-item-left">
+                    <div 
+                      className="mobile-menu-item-icon-box"
+                      style={{
+                        background: 'rgba(52, 211, 153, 0.14)',
+                        color: '#34D399',
+                        border: '1px solid rgba(52, 211, 153, 0.28)'
+                      }}
+                    >
                       <FileCheck size={18} />
-                      <span>Audit Workflow</span>
                     </div>
+                    <div className="mobile-menu-item-content">
+                      <span className="mobile-menu-item-title">Audit Workflow</span>
+                      <span className="mobile-menu-item-subtitle">4-stage ISO 17020 quality framework</span>
+                    </div>
+                    <ChevronRight size={16} className="mobile-menu-item-chevron" />
                   </button>
+
                   <button 
+                    type="button"
                     onClick={() => handleNavClick('#about')}
-                    className="sidebar-nav-item"
-                    style={{ width: '100%' }}
+                    className="mobile-menu-item-btn"
                   >
-                    <div className="sidebar-nav-item-left">
+                    <div 
+                      className="mobile-menu-item-icon-box"
+                      style={{
+                        background: 'rgba(251, 191, 36, 0.14)',
+                        color: '#FBBF24',
+                        border: '1px solid rgba(251, 191, 36, 0.28)'
+                      }}
+                    >
                       <ShieldCheck size={18} />
-                      <span>Why Choose Us</span>
                     </div>
+                    <div className="mobile-menu-item-content">
+                      <span className="mobile-menu-item-title">Why Choose Us</span>
+                      <span className="mobile-menu-item-subtitle">Conflict-free third-party verification</span>
+                    </div>
+                    <ChevronRight size={16} className="mobile-menu-item-chevron" />
                   </button>
+
                   <button 
+                    type="button"
                     onClick={() => handleNavClick('#contact')}
-                    className="sidebar-nav-item"
-                    style={{ width: '100%' }}
+                    className="mobile-menu-item-btn"
                   >
-                    <div className="sidebar-nav-item-left">
+                    <div 
+                      className="mobile-menu-item-icon-box"
+                      style={{
+                        background: 'rgba(244, 114, 182, 0.14)',
+                        color: '#F472B6',
+                        border: '1px solid rgba(244, 114, 182, 0.28)'
+                      }}
+                    >
                       <PhoneCall size={18} />
-                      <span>Contact &amp; Mills</span>
                     </div>
+                    <div className="mobile-menu-item-content">
+                      <span className="mobile-menu-item-title">Contact &amp; Mills</span>
+                      <span className="mobile-menu-item-subtitle">Direct hub in Punjab textile cluster</span>
+                    </div>
+                    <ChevronRight size={16} className="mobile-menu-item-chevron" />
                   </button>
 
-                  <div style={{ height: '1px', backgroundColor: '#1E293B', margin: '0.5rem 0' }} />
-
+                  <div className="mobile-menu-section-label">PORTAL ACCESS</div>
                   <button
+                    type="button"
                     onClick={() => { onNavigate('login'); handleClose(); }}
-                    className="btn btn-outline"
-                    style={{ width: '100%', justifyContent: 'center', color: '#FFFFFF', borderColor: '#334155', gap: '0.5rem' }}
+                    className="mobile-menu-action-btn sign-in"
                   >
-                    <LogIn size={16} />
-                    <span>Sign In</span>
+                    <LogIn size={16} style={{ color: '#38BDF8' }} />
+                    <span style={{ fontWeight: 700 }}>Sign In to Portal</span>
+                    <ChevronRight size={16} style={{ marginLeft: 'auto', opacity: 0.6 }} />
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => { onNavigate('register'); handleClose(); }}
-                    className="btn btn-accent"
-                    style={{ width: '100%', justifyContent: 'center', gap: '0.5rem' }}
+                    className="mobile-menu-action-btn register-cta"
                   >
                     <UserPlus size={16} />
-                    <span>Register (USA)</span>
+                    <span>Register Buyer Account (USA)</span>
+                    <ChevronRight size={16} style={{ marginLeft: 'auto' }} />
                   </button>
 
                   <a
                     href={whatsappLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="btn btn-success"
-                    style={{ width: '100%', justifyContent: 'center', gap: '0.5rem', marginTop: '0.25rem' }}
+                    className="mobile-menu-action-btn whatsapp-cta"
                   >
-                    <MessageCircle size={16} />
-                    <span>WhatsApp QA Desk</span>
+                    <div className="whatsapp-ping-dot" />
+                    <MessageCircle size={18} />
+                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.86rem', color: '#FFFFFF' }}>WhatsApp QA Desk</span>
+                      <span style={{ fontSize: '0.7rem', color: '#86EFAC' }}>Direct Buyer Inquiries (+92 300 8472910)</span>
+                    </div>
+                    <ExternalLink size={14} style={{ opacity: 0.7 }} />
                   </a>
                 </nav>
               </>

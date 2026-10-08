@@ -351,55 +351,100 @@ export function EmployeeDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen,
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.5rem' }}>
               Select Status View
             </label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               <button
                 type="button"
                 onClick={() => { setStatusFilter('active'); setMobileFilterOpen(false); }}
-                className={`btn btn-sm ${statusFilter === 'active' ? 'btn-primary' : 'btn-outline'}`}
-                style={{ justifyContent: 'space-between', padding: '0.65rem 0.85rem' }}
+                className={`mobile-filter-option-btn ${statusFilter === 'active' ? 'active' : ''}`}
               >
-                <span>Active Field Tasks</span>
-                <span className="badge" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>{activeCount}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: statusFilter === 'active' ? '#3B82F6' : '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <ListTodo size={16} color={statusFilter === 'active' ? '#FFFFFF' : '#2563EB'} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.88rem', color: statusFilter === 'active' ? '#1E40AF' : '#1E293B' }}>
+                      Active Field Tasks
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>In-progress audits</span>
+                  </div>
+                </div>
+                <span className={`badge ${statusFilter === 'active' ? 'badge-primary' : 'badge-neutral'}`}>{activeCount}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => { setStatusFilter('reinspection'); setMobileFilterOpen(false); }}
-                className={`btn btn-sm ${statusFilter === 'reinspection' ? 'btn-danger' : 'btn-outline'}`}
-                style={{ justifyContent: 'space-between', padding: '0.65rem 0.85rem', color: statusFilter === 'reinspection' ? '#FFFFFF' : '#EF4444' }}
+                className={`mobile-filter-option-btn danger-filter ${statusFilter === 'reinspection' ? 'active' : ''}`}
               >
-                <span>Re-Inspections Required</span>
-                <span className="badge" style={{ backgroundColor: '#DC2626', color: '#FFFFFF' }}>{reInspectCount}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: statusFilter === 'reinspection' ? '#EF4444' : '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <AlertTriangle size={16} color={statusFilter === 'reinspection' ? '#FFFFFF' : '#DC2626'} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.88rem', color: statusFilter === 'reinspection' ? '#991B1B' : '#DC2626' }}>
+                      Re-Inspections Required
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: '#EF4444' }}>Returned for revision</span>
+                  </div>
+                </div>
+                <span className="badge badge-danger">{reInspectCount}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => { setStatusFilter('submitted'); setMobileFilterOpen(false); }}
-                className={`btn btn-sm ${statusFilter === 'submitted' ? 'btn-primary' : 'btn-outline'}`}
-                style={{ justifyContent: 'space-between', padding: '0.65rem 0.85rem' }}
+                className={`mobile-filter-option-btn ${statusFilter === 'submitted' ? 'active' : ''}`}
               >
-                <span>Submitted Audits</span>
-                <span className="badge" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>{submittedCount}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: statusFilter === 'submitted' ? '#F59E0B' : '#FFFBEB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Clock size={16} color={statusFilter === 'submitted' ? '#FFFFFF' : '#D97706'} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.88rem', color: statusFilter === 'submitted' ? '#92400E' : '#1E293B' }}>
+                      Submitted Audits (Locked)
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Awaiting Director sign-off</span>
+                  </div>
+                </div>
+                <span className="badge badge-neutral">{submittedCount}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => { setStatusFilter('approved'); setMobileFilterOpen(false); }}
-                className={`btn btn-sm ${statusFilter === 'approved' ? 'btn-primary' : 'btn-outline'}`}
-                style={{ justifyContent: 'space-between', padding: '0.65rem 0.85rem' }}
+                className={`mobile-filter-option-btn ${statusFilter === 'approved' ? 'active' : ''}`}
               >
-                <span>Approved &amp; Certified</span>
-                <span className="badge" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>{approvedCount}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: statusFilter === 'approved' ? '#10B981' : '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <CheckCircle size={16} color={statusFilter === 'approved' ? '#FFFFFF' : '#059669'} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.88rem', color: statusFilter === 'approved' ? '#065F46' : '#1E293B' }}>
+                      Approved &amp; Certified
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Completed audits</span>
+                  </div>
+                </div>
+                <span className="badge badge-success">{approvedCount}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => { setStatusFilter('all'); setMobileFilterOpen(false); }}
-                className={`btn btn-sm ${statusFilter === 'all' ? 'btn-primary' : 'btn-outline'}`}
-                style={{ justifyContent: 'space-between', padding: '0.65rem 0.85rem' }}
+                className={`mobile-filter-option-btn ${statusFilter === 'all' ? 'active' : ''}`}
               >
-                <span>All Task History</span>
-                <span className="badge" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>{inspections.length}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: statusFilter === 'all' ? '#6366F1' : '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <FileCheck size={16} color={statusFilter === 'all' ? '#FFFFFF' : '#4F46E5'} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.88rem', color: statusFilter === 'all' ? '#3730A3' : '#1E293B' }}>
+                      All Task History
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Full inspection ledger</span>
+                  </div>
+                </div>
+                <span className="badge badge-neutral">{inspections.length}</span>
               </button>
             </div>
           </div>

@@ -464,41 +464,89 @@ export function CustomerDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen,
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
-              Order Status Filter
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.45rem' }}>
+              Select Order Status
             </label>
-            <select
-              value={activeMenu}
-              onChange={(e) => setActiveMenu(e.target.value)}
-              className="form-select"
-              style={{ width: '100%' }}
-            >
-              <option value="all">All Purchase Orders ({orders.length})</option>
-              <option value="active">Under Active Inspection ({inProgressCount})</option>
-              <option value="approved">Certified &amp; Approved ({completedCount})</option>
-            </select>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+              <button
+                type="button"
+                onClick={() => { setActiveMenu('all'); }}
+                className={`mobile-filter-option-btn ${activeMenu === 'all' ? 'active' : ''}`}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: activeMenu === 'all' ? '#3B82F6' : '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <FileText size={16} color={activeMenu === 'all' ? '#FFFFFF' : '#2563EB'} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.88rem', color: activeMenu === 'all' ? '#1E40AF' : '#1E293B' }}>
+                      All Purchase Orders
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Complete PO list</span>
+                  </div>
+                </div>
+                <span className={`badge ${activeMenu === 'all' ? 'badge-primary' : 'badge-neutral'}`}>{orders.length}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setActiveMenu('active'); }}
+                className={`mobile-filter-option-btn ${activeMenu === 'active' ? 'active' : ''}`}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: activeMenu === 'active' ? '#F59E0B' : '#FFFBEB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Clock size={16} color={activeMenu === 'active' ? '#FFFFFF' : '#D97706'} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.88rem', color: activeMenu === 'active' ? '#92400E' : '#1E293B' }}>
+                      Under Active Inspection
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Ongoing factory audits</span>
+                  </div>
+                </div>
+                <span className={`badge ${activeMenu === 'active' ? 'badge-primary' : 'badge-neutral'}`}>{inProgressCount}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setActiveMenu('approved'); }}
+                className={`mobile-filter-option-btn ${activeMenu === 'approved' ? 'active' : ''}`}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: activeMenu === 'approved' ? '#10B981' : '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <CheckCircle size={16} color={activeMenu === 'approved' ? '#FFFFFF' : '#059669'} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.88rem', color: activeMenu === 'approved' ? '#065F46' : '#1E293B' }}>
+                      Certified &amp; Approved
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: '#64748B' }}>Finalized QA certificates</span>
+                  </div>
+                </div>
+                <span className={`badge ${activeMenu === 'approved' ? 'badge-primary' : 'badge-neutral'}`}>{completedCount}</span>
+              </button>
+            </div>
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '0.45rem' }}>
               Display Mode
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
               <button
                 type="button"
                 onClick={() => setViewMode('cards')}
                 className={`btn btn-sm ${viewMode === 'cards' ? 'btn-primary' : 'btn-outline'}`}
-                style={{ justifyContent: 'center' }}
+                style={{ justifyContent: 'center', padding: '0.65rem 0.85rem', fontWeight: 700 }}
               >
-                <LayoutGrid size={14} /> Cards View
+                <LayoutGrid size={15} /> Cards View
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode('table')}
                 className={`btn btn-sm ${viewMode === 'table' ? 'btn-primary' : 'btn-outline'}`}
-                style={{ justifyContent: 'center' }}
+                style={{ justifyContent: 'center', padding: '0.65rem 0.85rem', fontWeight: 700 }}
               >
-                <List size={14} /> Table View
+                <List size={15} /> Table View
               </button>
             </div>
           </div>
