@@ -2,14 +2,33 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Root media folder outside of project folder: "awais new/media"
-const MEDIA_ROOT = path.resolve(__dirname, '../../../../media');
+// Flexible media root resolution (works across local Windows dev and Hostinger/Linux production)
+const possibleMediaDirs = [
+  process.env.MEDIA_DIR && path.resolve(process.env.MEDIA_DIR),
+  path.resolve(__dirname, '../../../media'), // project/media (Hostinger repo root / production)
+  path.resolve(__dirname, '../../../../media'), // awais new/media (local root)
+  path.resolve(__dirname, '../../media')
+].filter(Boolean);
+
+let MEDIA_ROOT = possibleMediaDirs.find(d => fs.existsSync(d)) || path.resolve(__dirname, '../../../media');
+
+try {
+  if (!fs.existsSync(MEDIA_ROOT)) {
+    fs.mkdirSync(MEDIA_ROOT, { recursive: true });
+  }
+} catch (err) {
+  console.warn('Could not create MEDIA_ROOT:', err.message);
+}
 
 // Ensure root and subdirectories exist
 ['inspections', 'slider', 'branding'].forEach(sub => {
-  const dir = path.join(MEDIA_ROOT, sub);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+  try {
+    const dir = path.join(MEDIA_ROOT, sub);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  } catch (err) {
+    console.warn(`Could not create ${sub} dir:`, err.message);
   }
 });
 
@@ -26,7 +45,11 @@ const storage = multer.diskStorage({
 
     const targetDir = path.join(MEDIA_ROOT, subfolder);
     if (!fs.existsSync(targetDir)) {
-      fs.mkdirSync(targetDir, { recursive: true });
+      try {
+        fs.mkdirSync(targetDir, { recursive: true });
+      } catch (err) {
+        return cb(err);
+      }
     }
     cb(null, targetDir);
   },
@@ -39,7 +62,7 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|webp|svg|pdf/;
+  const allowedTypes = /jpeg|jpg|png|webp|svg|pdf|heic|heif/;
   const ext = path.extname(file.originalname).toLowerCase().replace('.', '');
   const mime = file.mimetype;
 
@@ -52,7 +75,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   limits: {
-    fileSize: 25 * 1024 * 1024 // 25MB max for high-res inspection photos
+    fileSize: 35 * 1024 * 1024 // 35MB max for mobile photos
   },
   fileFilter
 });
@@ -64,6 +87,7 @@ sharp.cache(false);
 /**
  * Middleware that converts any uploaded image in req.file / req.files to WebP.
  * Preserves SVG and PDF without altering them.
+ * Auto-rotates using EXIF orientation tag from mobile cameras.
  * Updates req.file.filename, req.file.path, and req.file.mimetype so downstream
  * controllers automatically use the .webp file without code changes.
  */
@@ -88,23 +112,29 @@ async function convertToWebp(req, res, next) {
         return; // Already webp
       }
 
-      await sharp(origPath)
-        .webp({ quality: 85 })
-        .toFile(webpPath);
+      try {
+        await sharp(origPath)
+          .rotate() // Auto-orient mobile photos based on EXIF
+          .webp({ quality: 85 })
+          .toFile(webpPath);
 
-      // Remove the original non-webp file
-      if (origPath !== webpPath && fs.existsSync(origPath)) {
-        try {
-          fs.unlinkSync(origPath);
-        } catch (unlinkErr) {
-          console.warn('Failed to clean up uploaded raw file:', unlinkErr.message);
+        // Remove the original non-webp file
+        if (origPath !== webpPath && fs.existsSync(origPath)) {
+          try {
+            fs.unlinkSync(origPath);
+          } catch (unlinkErr) {
+            console.warn('Failed to clean up uploaded raw file:', unlinkErr.message);
+          }
         }
-      }
 
-      // Update file object for subsequent controllers
-      file.filename = webpFilename;
-      file.path = webpPath;
-      file.mimetype = 'image/webp';
+        // Update file object for subsequent controllers
+        file.filename = webpFilename;
+        file.path = webpPath;
+        file.mimetype = 'image/webp';
+      } catch (sharpErr) {
+        console.warn('Sharp WebP conversion warning (keeping original file):', sharpErr.message);
+        // Do not fail the request; multer has safely saved the file
+      }
     };
 
     if (req.file) {
