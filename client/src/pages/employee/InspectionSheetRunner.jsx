@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { inspectionsApi, defectsApi, reportApi } from '../../services/api';
 import { compressImage } from '../../utils/imageCompressor';
+import { openPdfViewer } from '../../components/PdfReportViewerModal';
 import { 
   ArrowLeft, 
   Save, 
@@ -521,17 +522,20 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
             <span>Export Excel</span>
           </a>
 
-          <a
-            href={reportApi.getPdfUrl(sheet.id)}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() => openPdfViewer(sheet.id, {
+              title: `Inspection Sheet #${sheet.id} (${sheet.po_number || ''})`,
+              poNumber: sheet.po_number,
+              status: sheet.status
+            })}
             className="btn btn-outline btn-sm"
             style={{ color: '#DC2626', borderColor: '#FECACA', backgroundColor: '#FEF2F2' }}
-            title="View PDF Certificate in 2nd tab (with choice to download)"
+            title="View Official PDF Report (with Return to App)"
           >
             <FileText size={15} />
-            <span>Export PDF</span>
-          </a>
+            <span>View PDF Report</span>
+          </button>
 
 
           <span className={`badge ${sheet.status === 'Submitted' || sheet.status === 'Approved' ? 'badge-success' : 'badge-in-progress'}`} style={{ fontSize: '0.75rem' }}>

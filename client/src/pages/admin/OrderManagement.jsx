@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { InspectionReviewModal } from './InspectionReviewModal';
 import { AdvancedFilterModal } from '../../components/AdvancedFilterModal';
+import { openPdfViewer } from '../../components/PdfReportViewerModal';
 
 export function OrderManagement({ onOpenPhoto }) {
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
@@ -990,17 +991,19 @@ export function OrderManagement({ onOpenPhoto }) {
                             <Download size={13} />
                             <span>Excel</span>
                           </a>
-                          <a
-                            href={reportApi.getPdfUrl(ins.id)}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            type="button"
+                            onClick={() => openPdfViewer(ins.id, {
+                              title: `Inspection Certificate #${ins.id}`,
+                              status: ins.status
+                            })}
                             className="btn btn-outline btn-sm"
                             style={{ fontSize: '0.72rem', padding: '0.25rem 0.55rem', color: '#DC2626' }}
-                            title="View PDF Certificate in 2nd tab (with choice to download)"
+                            title="View Official PDF Report (with Return to App)"
                           >
                             <FileText size={13} />
                             <span>PDF</span>
-                          </a>
+                          </button>
 
                         </div>
                       </div>

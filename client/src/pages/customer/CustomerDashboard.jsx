@@ -32,6 +32,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { AdvancedFilterModal } from '../../components/AdvancedFilterModal';
+import { openPdfViewer } from '../../components/PdfReportViewerModal';
 
 export function CustomerDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen, onCloseMobileDrawer }) {
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
@@ -605,16 +606,19 @@ export function CustomerDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen,
                               <Eye size={14} /> {o.inspections_count > 1 ? `View Audits (${o.inspections_count})` : 'View Audit'}
                             </button>
                             {o.inspection_status === 'Approved' && o.sheet_id && (
-                              <a
-                                href={reportApi.getPdfUrl(o.sheet_id)}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <button
+                                type="button"
+                                onClick={() => openPdfViewer(o.sheet_id, {
+                                  title: `Inspection Certificate - PO ${o.po_number || ''}`,
+                                  poNumber: o.po_number,
+                                  status: o.inspection_status
+                                })}
                                 className="btn btn-ghost btn-sm"
                                 style={{ color: '#DC2626', padding: '4px' }}
-                                title="View PDF Certificate in 2nd tab (with download option)"
+                                title="View Official PDF Report (with Return to App)"
                               >
                                 <FileText size={16} />
-                              </a>
+                              </button>
                             )}
                           </div>
                         ) : (
@@ -710,16 +714,19 @@ export function CustomerDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen,
                           <Eye size={14} /> {o.inspections_count > 1 ? `View Audits (${o.inspections_count})` : 'View Audit'}
                         </button>
                         {o.inspection_status === 'Approved' && o.sheet_id && (
-                          <a
-                            href={reportApi.getPdfUrl(o.sheet_id)}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            type="button"
+                            onClick={() => openPdfViewer(o.sheet_id, {
+                              title: `Inspection Certificate - PO ${o.po_number || ''}`,
+                              poNumber: o.po_number,
+                              status: o.inspection_status
+                            })}
                             className="btn btn-primary btn-sm"
                             style={{ gap: '4px' }}
-                            title="View PDF Certificate in 2nd tab (with download option)"
+                            title="View Official PDF Report (with Return to App)"
                           >
                             <FileText size={14} /> View PDF
-                          </a>
+                          </button>
                         )}
                       </>
                     ) : (
@@ -1004,9 +1011,17 @@ export function CustomerDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen,
 
             <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <a href={reportApi.getPdfUrl(selectedInspection.id)} target="_blank" rel="noopener noreferrer" className="btn btn-outline btn-sm" title="View PDF in 2nd tab (with choice to download)">
+                <button
+                  type="button"
+                  onClick={() => openPdfViewer(selectedInspection.id, {
+                    title: `Inspection Report #${selectedInspection.id}`,
+                    status: selectedInspection.status
+                  })}
+                  className="btn btn-outline btn-sm"
+                  title="View Official PDF Report (with Return to App)"
+                >
                   <FileText size={15} color="#DC2626" /> View PDF Report
-                </a>
+                </button>
                 <a href={reportApi.getExcelUrl(selectedInspection.id)} download target="_blank" rel="noopener noreferrer" className="btn btn-outline btn-sm">
                   <Download size={15} color="#16A34A" /> Download Excel
                 </a>
@@ -1129,16 +1144,18 @@ export function CustomerDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen,
                         >
                           <Download size={13} /> Excel
                         </a>
-                        <a
-                          href={reportApi.getPdfUrl(ins.id)}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          type="button"
+                          onClick={() => openPdfViewer(ins.id, {
+                            title: `Inspection Report #${ins.id}`,
+                            status: ins.status
+                          })}
                           className="btn btn-outline btn-sm"
                           style={{ fontSize: '0.72rem', padding: '0.25rem 0.55rem', color: '#DC2626' }}
-                          title="View PDF Report in 2nd tab (with choice to download)"
+                          title="View Official PDF Report (with Return to App)"
                         >
                           <FileText size={13} /> View PDF
-                        </a>
+                        </button>
 
                       </div>
                     </div>

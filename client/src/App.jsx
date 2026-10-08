@@ -4,6 +4,7 @@ import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { ToastContainer } from './components/ToastContainer';
 import { PhotoViewerModal } from './components/PhotoViewerModal';
+import { PdfReportViewerModal } from './components/PdfReportViewerModal';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 
 // Pages
@@ -74,7 +75,19 @@ export default function App() {
   });
 
   const [activePhoto, setActivePhoto] = useState(null);
+  const [activePdfModal, setActivePdfModal] = useState(null);
   const [dashboardDrawerOpen, setDashboardDrawerOpen] = useState(false);
+
+  // Listen for global PDF Report Viewer requests
+  useEffect(() => {
+    const handleOpenPdf = (e) => {
+      if (e.detail) {
+        setActivePdfModal(e.detail);
+      }
+    };
+    window.addEventListener('apex:open_pdf_modal', handleOpenPdf);
+    return () => window.removeEventListener('apex:open_pdf_modal', handleOpenPdf);
+  }, []);
 
   // Synchronized navigation with HTML5 History API
   const navigate = useCallback((view, search = '') => {
@@ -196,6 +209,18 @@ export default function App() {
       {/* Lightbox Photo Viewer Modal */}
       {activePhoto && (
         <PhotoViewerModal photo={activePhoto} onClose={() => setActivePhoto(null)} />
+      )}
+
+      {/* Global In-App PDF Report Viewer with prominent Return to App */}
+      {activePdfModal && (
+        <PdfReportViewerModal
+          isOpen={!!activePdfModal}
+          onClose={() => setActivePdfModal(null)}
+          inspectionId={activePdfModal.id}
+          title={activePdfModal.title}
+          poNumber={activePdfModal.poNumber}
+          status={activePdfModal.status}
+        />
       )}
 
       {/* Global Footer (Visible on landing and marketing views) */}

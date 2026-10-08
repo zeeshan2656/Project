@@ -19,17 +19,31 @@ import {
   Edit3, 
   ShieldAlert, 
   X,
-  Phone
+  Phone,
+  Fingerprint,
+  Smartphone
 } from 'lucide-react';
 
 export function AdminProfileSecurity() {
-  const { user, updateCurrentUser } = useAuth();
+  const { 
+    user, 
+    updateCurrentUser, 
+    enrollUserBiometrics, 
+    disableUserBiometrics, 
+    isBiometricEnrolled, 
+    loginWithBiometrics 
+  } = useAuth();
   
   // Profile state
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Biometric / Fingerprint State
+  const [biometricActive, setBiometricActive] = useState(() => isBiometricEnrolled ? isBiometricEnrolled() : false);
+  const [biometricLoading, setBiometricLoading] = useState(false);
+  const [biometricStatusMsg, setBiometricStatusMsg] = useState('');
 
   // Password visibility toggles
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -127,6 +141,46 @@ export function AdminProfileSecurity() {
       ...prev,
       [adminId]: !prev[adminId]
     }));
+  };
+
+  // Biometric / Fingerprint Handlers
+  const handleEnrollBiometrics = async () => {
+    setBiometricStatusMsg('');
+    setBiometricLoading(true);
+    try {
+      const res = await enrollUserBiometrics();
+      setBiometricActive(true);
+      setBiometricStatusMsg('Fingerprint sensor registered successfully on this device! Quick one-touch unlock is now enabled.');
+    } catch (err) {
+      setBiometricStatusMsg(`Setup note: ${err.message || 'Fingerprint setup cancelled or unsupported.'}`);
+    } finally {
+      setBiometricLoading(false);
+    }
+  };
+
+  const handleTestBiometrics = async () => {
+    setBiometricStatusMsg('');
+    setBiometricLoading(true);
+    try {
+      const res = await loginWithBiometrics();
+      if (res && res.success) {
+        setBiometricStatusMsg('Biometric verification passed! Fingerprint sensor is working perfectly on this device.');
+      } else {
+        setBiometricStatusMsg(`Verification failed: ${res?.message || 'Biometric not recognized'}`);
+      }
+    } catch (err) {
+      setBiometricStatusMsg(`Sensor test note: ${err.message || 'Verification cancelled'}`);
+    } finally {
+      setBiometricLoading(false);
+    }
+  };
+
+  const handleDisableBiometrics = () => {
+    if (window.confirm('Remove fingerprint authentication credentials from this device?')) {
+      disableUserBiometrics();
+      setBiometricActive(false);
+      setBiometricStatusMsg('Fingerprint credentials removed from this device.');
+    }
   };
 
   // Handle current admin credentials update
@@ -493,6 +547,110 @@ export function AdminProfileSecurity() {
             <div style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '0.35rem' }}>
               Encrypted with standard bcrypt security hash.
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 2.5 BIOMETRIC & FINGERPRINT SECURITY SETTINGS */}
+      <div style={{
+        backgroundColor: '#FFFFFF',
+        borderRadius: '12px',
+        border: '1px solid #E2E8F0',
+        padding: '1.5rem',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', borderBottom: '1px solid #F1F5F9', paddingBottom: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Fingerprint size={20} color="#2563EB" />
+            <div>
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, margin: 0, color: '#0F172A' }}>
+                Mobile Fingerprint &amp; Biometric Security
+              </h3>
+              <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '2px' }}>
+                One-touch hardware authentication for Android fingerprint sensors, iOS Face/Touch ID, and Windows Hello.
+              </div>
+            </div>
+          </div>
+          <span style={{
+            fontSize: '0.72rem',
+            fontWeight: 700,
+            padding: '3px 9px',
+            borderRadius: '999px',
+            backgroundColor: biometricActive ? '#DCFCE7' : '#F1F5F9',
+            color: biometricActive ? '#166534' : '#64748B',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px'
+          }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: biometricActive ? '#16A34A' : '#94A3B8' }} />
+            {biometricActive ? 'Active on this Device' : 'Not Configured'}
+          </span>
+        </div>
+
+        {biometricStatusMsg && (
+          <div style={{
+            backgroundColor: biometricStatusMsg.startsWith('Error') || biometricStatusMsg.startsWith('Verification failed') ? '#FEF2F2' : '#EFF6FF',
+            border: `1px solid ${biometricStatusMsg.startsWith('Error') || biometricStatusMsg.startsWith('Verification failed') ? '#FCA5A5' : '#BFDBFE'}`,
+            borderRadius: '8px',
+            padding: '0.75rem 1rem',
+            color: biometricStatusMsg.startsWith('Error') || biometricStatusMsg.startsWith('Verification failed') ? '#B91C1C' : '#1D4ED8',
+            fontSize: '0.82rem',
+            fontWeight: 600,
+            marginBottom: '1.25rem'
+          }}>
+            {biometricStatusMsg}
+          </div>
+        )}
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '1.25rem',
+          alignItems: 'center'
+        }}>
+          <div>
+            <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1E293B', marginBottom: '0.35rem' }}>
+              Touch Fingerprint Quick Sign-In
+            </div>
+            <p style={{ fontSize: '0.8rem', color: '#64748B', lineHeight: '1.45', margin: 0 }}>
+              Inspectors, USA clients, and administrators can log into the platform with zero typing by scanning their finger. Sensor keys are cryptographically stored on the local device.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', justifyContent: 'flex-start' }}>
+            {!biometricActive ? (
+              <button
+                type="button"
+                onClick={handleEnrollBiometrics}
+                disabled={biometricLoading}
+                className="btn btn-primary"
+                style={{ fontSize: '0.82rem', fontWeight: 700, padding: '0.65rem 1rem' }}
+              >
+                {biometricLoading ? <RefreshCw size={15} className="animate-spin" /> : <Fingerprint size={16} />}
+                <span>Enroll Device Fingerprint</span>
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={handleTestBiometrics}
+                  disabled={biometricLoading}
+                  className="btn btn-outline"
+                  style={{ fontSize: '0.82rem', fontWeight: 700, padding: '0.65rem 1rem', borderColor: '#2563EB', color: '#2563EB' }}
+                >
+                  {biometricLoading ? <RefreshCw size={15} className="animate-spin" /> : <Fingerprint size={16} />}
+                  <span>Test Fingerprint Sensor</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDisableBiometrics}
+                  className="btn btn-secondary"
+                  style={{ fontSize: '0.82rem', color: '#DC2626', borderColor: '#FECACA' }}
+                >
+                  <span>Disable on Device</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

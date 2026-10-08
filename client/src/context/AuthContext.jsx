@@ -1,5 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi } from '../services/api';
+import { 
+  authenticateBiometrics, 
+  enrollBiometrics, 
+  disableBiometrics, 
+  isBiometricEnrolled, 
+  getEnrolledBiometricUser,
+  isPlatformAuthenticatorAvailable
+} from '../utils/biometricAuth';
 
 const AuthContext = createContext(null);
 
@@ -119,6 +127,36 @@ export function AuthProvider({ children }) {
     return null;
   };
 
+  const loginWithBiometrics = async () => {
+    setLoading(true);
+    try {
+      const res = await authenticateBiometrics();
+      if (res && res.success && res.token && res.user) {
+        setUser(res.user);
+        setToken(res.token);
+        localStorage.setItem('apex_token', res.token);
+        localStorage.setItem('apex_user', JSON.stringify(res.user));
+        return { success: true, user: res.user };
+      }
+      return { success: false, message: res?.message || 'Biometric authentication failed.' };
+    } catch (err) {
+      return { success: false, message: err.message || 'Fingerprint verification failed.' };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const enrollUserBiometrics = async () => {
+    if (!user || !token) {
+      throw new Error('You must be signed in to enroll fingerprint authentication.');
+    }
+    return await enrollBiometrics(user, token);
+  };
+
+  const disableUserBiometrics = () => {
+    return disableBiometrics();
+  };
+
   const isAuthenticated = !!(user && token);
 
   return (
@@ -128,6 +166,12 @@ export function AuthProvider({ children }) {
       role: user?.role, 
       isAuthenticated, 
       login, 
+      loginWithBiometrics,
+      enrollUserBiometrics,
+      disableUserBiometrics,
+      isBiometricEnrolled,
+      getEnrolledBiometricUser,
+      isPlatformAuthenticatorAvailable,
       register, 
       logout, 
       updateCurrentUser,

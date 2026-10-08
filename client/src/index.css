@@ -2254,4 +2254,395 @@ main {
   }
 }
 
+/* ==========================================================================
+   IN-APP MOBILE PDF REPORT VIEWER (.pdf-viewer-*)
+   ========================================================================== */
+
+.pdf-viewer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background-color: #0F172A;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+  animation: pdfViewerFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pdfViewerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pdf-viewer-header {
+  height: 62px;
+  min-height: 62px;
+  background-color: #090D16;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  z-index: 10;
+  gap: 0.75rem;
+}
+
+.pdf-viewer-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(30, 41, 59, 0.9);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #FFFFFF;
+  padding: 0.5rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.pdf-viewer-back-btn:hover,
+.pdf-viewer-back-btn:active {
+  background: #0284C7;
+  border-color: #38BDF8;
+  transform: translateX(-2px);
+}
+
+.pdf-viewer-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pdf-viewer-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.pdf-viewer-sub {
+  font-size: 0.7rem;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pdf-status-pill {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #E2E8F0;
+}
+
+.pdf-status-pill.approved {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34D399;
+}
+.pdf-status-pill.submitted {
+  background: rgba(245, 158, 11, 0.2);
+  color: #FBBF24;
+}
+
+.pdf-viewer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pdf-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 7px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.pdf-btn-download {
+  background: linear-gradient(135deg, #0284C7 0%, #2563EB 100%);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.pdf-btn-download:hover {
+  filter: brightness(1.1);
+}
+
+.pdf-btn-icon {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #E2E8F0;
+}
+.pdf-btn-icon:hover {
+  background: rgba(51, 65, 85, 0.9);
+  color: #FFFFFF;
+}
+
+.pdf-btn-close {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #F87171;
+  padding: 0.45rem;
+  border-radius: 7px;
+}
+.pdf-btn-close:hover {
+  background: #EF4444;
+  color: #FFFFFF;
+}
+
+.pdf-viewer-body {
+  flex: 1;
+  position: relative;
+  background-color: #1E293B;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.pdf-iframe-element {
+  width: 100%;
+  height: 100%;
+  border: none;
+  flex: 1;
+  background-color: #334155;
+}
+
+.pdf-viewer-loading,
+.pdf-viewer-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  text-align: center;
+  background: rgba(15, 23, 42, 0.95);
+  z-index: 5;
+}
+
+.pdf-spinner {
+  width: 44px;
+  height: 44px;
+  border: 3.5px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #38BDF8;
+  border-radius: 50%;
+  animation: spin 0.85s linear infinite;
+}
+
+.pdf-viewer-mobile-bottom-bar {
+  display: none;
+  background: #090D16;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.65rem 1rem;
+  gap: 0.75rem;
+  z-index: 10;
+}
+
+.pdf-mobile-return-btn {
+  flex: 1.5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #0284C7 0%, #2563EB 100%);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 9px;
+  padding: 0.65rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pdf-mobile-download-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #FFFFFF;
+  border-radius: 9px;
+  padding: 0.65rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .desktop-only-btn {
+    display: none !important;
+  }
+  .pdf-viewer-mobile-bottom-bar {
+    display: flex;
+  }
+  .pdf-btn-label {
+    display: none;
+  }
+  .pdf-viewer-title {
+    max-width: 140px;
+  }
+}
+
+/* ==========================================================================
+   BIOMETRIC & FINGERPRINT AUTHENTICATION (.biometric-*)
+   ========================================================================== */
+
+.biometric-login-box {
+  background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.85rem;
+  box-shadow: 0 4px 18px rgba(2, 132, 199, 0.15);
+}
+
+.biometric-pulse-scanner {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: rgba(2, 132, 199, 0.15);
+  border: 2px solid #38BDF8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.biometric-pulse-scanner::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(56, 189, 248, 0.4);
+  animation: biometricPing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes biometricPing {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  70% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+}
+
+.biometric-scan-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  background: linear-gradient(135deg, #0284C7 0%, #2563EB 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  transition: all 0.18s ease;
+}
+
+.biometric-scan-button:active {
+  transform: scale(0.985);
+}
+
+.biometric-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.15);
+  color: #22C55E;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.biometric-touch-target {
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+  border: 2px solid #3B82F6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: 0 4px 18px rgba(37, 99, 235, 0.2);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.biometric-touch-target:hover {
+  transform: scale(1.05);
+  border-color: #2563EB;
+  box-shadow: 0 6px 24px rgba(37, 99, 235, 0.35);
+}
+
+.biometric-touch-target::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 2px solid rgba(59, 130, 246, 0.35);
+  animation: biometricPing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.biometric-touch-target.scanning {
+  border-color: #10B981;
+  background: #ECFDF5;
+  box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.2);
+}
+
+.biometric-touch-target.scanning .biometric-fingerprint-svg {
+  color: #059669;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.biometric-fingerprint-svg {
+  color: #2563EB;
+  transition: color 0.2s ease;
+}
+
+
 

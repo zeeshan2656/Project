@@ -3,6 +3,7 @@ import { inspectionsApi, ordersApi, templatesApi, usersApi, reportApi } from '..
 import { useSocket } from '../../context/SocketContext';
 import { InspectionReviewModal } from './InspectionReviewModal';
 import { AdvancedFilterModal } from '../../components/AdvancedFilterModal';
+import { openPdfViewer } from '../../components/PdfReportViewerModal';
 import { 
   Plus, 
   Search, 
@@ -405,16 +406,19 @@ export function InspectionManagement({ onOpenPhoto }) {
                         <Download size={16} />
                       </a>
 
-                      <a
-                        href={reportApi.getPdfUrl(ins.id)}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        type="button"
+                        onClick={() => openPdfViewer(ins.id, {
+                          title: `Inspection Report #${ins.id} (${ins.po_number || ''})`,
+                          poNumber: ins.po_number,
+                          status: ins.status
+                        })}
                         className="btn btn-ghost btn-sm"
                         style={{ color: '#DC2626', padding: '4px' }}
-                        title="View PDF Report in 2nd tab (with choice to download)"
+                        title="View Official PDF Report (with Return to App)"
                       >
                         <FileText size={16} />
-                      </a>
+                      </button>
 
                     </div>
                   </td>

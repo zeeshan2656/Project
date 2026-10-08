@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { inspectionsApi, reportApi } from '../../services/api';
+import { openPdfViewer } from '../../components/PdfReportViewerModal';
 import { 
   X, 
   CheckCircle, 
@@ -419,17 +420,19 @@ export function InspectionReviewModal({ inspection, onClose, onRefresh, onOpenPh
         <div className="modal-footer inspection-review-footer">
           {/* Download Buttons */}
           <div className="inspection-review-download-btns">
-            <a
-              href={reportApi.getPdfUrl(inspection.id)}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={() => openPdfViewer(inspection.id, {
+                title: `Inspection Report #${inspection.id}`,
+                status: inspection.status
+              })}
               className="btn btn-outline btn-sm"
               style={{ fontWeight: 600 }}
-              title="View PDF Report in 2nd tab (with choice to download)"
+              title="View Official PDF Report (with Return to App)"
             >
               <FileText size={14} color="#DC2626" />
               <span>View PDF Report</span>
-            </a>
+            </button>
 
             <a
               href={reportApi.getExcelUrl(inspection.id)}
