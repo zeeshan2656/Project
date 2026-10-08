@@ -223,8 +223,8 @@ export default function App() {
         />
       )}
 
-      {/* Global Footer (Visible on landing and marketing views) */}
-      {(currentView === 'landing' || currentView === 'login' || currentView === 'register') && (
+      {/* Global Footer (Visible on landing page only, removed from login) */}
+      {currentView === 'landing' && (
         <Footer onNavigate={navigate} />
       )}
     </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   ArrowLeft, 
   Download, 
@@ -9,22 +9,33 @@ import {
   CheckCircle, 
   AlertCircle,
   RefreshCw,
-  Printer
+  Printer,
+  ZoomIn,
+  ZoomOut,
+  Maximize2
 } from 'lucide-react';
 import { reportApi } from '../services/api';
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.js?url';
+
+// Initialize PDF.js worker
+if (typeof window !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker || 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
 
 /**
- * Mobile-First In-App PDF Report Viewer Modal
+ * Mobile-First In-App PDF Report Viewer with Native Canvas Rendering (PDF.js)
  * 
- * Solves the critical mobile/PWA issue where opening a raw PDF navigated the browser 
- * away with NO back button, trapping the user inside the PDF viewer.
- * 
- * Features:
- * - Prominent "← Back to App" top button (guaranteed return path in PWA/mobile view)
- * - Hardware / Gesture back button support (via browser history popstate)
- * - Direct "Download PDF" button without leaving the application
- * - Native Mobile Share (WhatsApp, Email, Drive via navigator.share)
- * - Fallback full-screen iframe viewer with loading spinner
+ * Solves the critical mobile issues:
+ * 1. Mobile Android Chrome does NOT support inline PDFs in iframes, causing Chrome 
+ *    to display an external "pdf [Open]" button which then navigates away with no back button.
+ * 2. By rendering PDF pages directly to HTML5 <canvas> elements:
+ *    - The user IMMEDIATELY sees the actual inspection report table & photo evidence in-app.
+ *    - No "Open" button is ever shown!
+ *    - The header with "[ ← Back to App ]" remains permanently pinned at the top.
+ *    - Mobile bottom bar with "[ ← Exit PDF & Return to App ]" allows instant return anytime.
+ *    - Full gesture / hardware back button support via window.history popstate.
+ *    - Pinch-to-zoom and +/- scale controls.
  */
 export function PdfReportViewerModal({
   isOpen,
@@ -35,9 +46,16 @@ export function PdfReportViewerModal({
   status
 }) {
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [downloading, setDownloading] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
+  const [pdfDoc, setPdfDoc] = useState(null);
+  const [numPages, setNumPages] = useState(0);
+  const [zoomScale, setZoomScale] = useState(1.0); // 1.0 = auto-fit width
+  const [renderingPages, setRenderingPages] = useState(false);
+
+  const containerRef = useRef(null);
+  const canvasRefs = useRef([]);
 
   const pdfUrl = inspectionId ? reportApi.getPdfUrl(inspectionId) : '';
 
@@ -73,6 +91,129 @@ export function PdfReportViewerModal({
     };
   }, [isOpen, onClose]);
 
+  // Load PDF Document via ArrayBuffer when modal opens
+  useEffect(() => {
+    if (!isOpen || !inspectionId) return;
+
+    let isMounted = true;
+    setLoading(true);
+    setLoadError('');
+    setPdfDoc(null);
+    setNumPages(0);
+    setZoomScale(1.0);
+
+    const loadPdfData = async () => {
+      try {
+        const token = localStorage.getItem('apex_token');
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const fetchUrl = `/api/reports/inspection/${inspectionId}/pdf`;
+        
+        const response = await fetch(fetchUrl, { headers });
+        if (!response.ok) {
+          throw new Error(`Server returned HTTP ${response.status}: Failed to load inspection certificate`);
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        if (!isMounted) return;
+
+        const typedArray = new Uint8Array(arrayBuffer);
+        const loadingTask = pdfjsLib.getDocument({
+          data: typedArray,
+          cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+          cMapPacked: true
+        });
+
+        const doc = await loadingTask.promise;
+        if (!isMounted) return;
+
+        setPdfDoc(doc);
+        setNumPages(doc.numPages);
+        setLoading(false);
+      } catch (err) {
+        console.error('[PdfReportViewer] Error loading PDF:', err);
+        if (isMounted) {
+          setLoadError(err.message || 'Failed to render PDF document');
+          setLoading(false);
+        }
+      }
+    };
+
+    loadPdfData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, inspectionId]);
+
+  // Render all PDF pages onto HTML5 canvas elements
+  useEffect(() => {
+    if (!pdfDoc || numPages === 0) return;
+
+    let isCancelled = false;
+    setRenderingPages(true);
+
+    const renderAllPages = async () => {
+      // Calculate available width inside container
+      const containerWidth = containerRef.current 
+        ? containerRef.current.clientWidth 
+        : (window.innerWidth || 360);
+      
+      // On mobile, use containerWidth - 16px padding. Max width 850px on desktop
+      const maxDocWidth = Math.min(containerWidth - 20, 850);
+      const availableWidth = Math.max(maxDocWidth, 280);
+
+      for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+        if (isCancelled) break;
+        const canvas = canvasRefs.current[pageNum - 1];
+        if (!canvas) continue;
+
+        try {
+          const page = await pdfDoc.getPage(pageNum);
+          if (isCancelled) break;
+
+          const baseViewport = page.getViewport({ scale: 1.0 });
+          // Base fit-to-width scale multiplied by user zoom
+          const fitScale = (availableWidth / baseViewport.width) * zoomScale;
+          const viewport = page.getViewport({ scale: fitScale });
+
+          // Support High-DPI / Retina mobile screens for crisp vector rendering
+          const pixelRatio = window.devicePixelRatio || 1;
+          canvas.width = Math.floor(viewport.width * pixelRatio);
+          canvas.height = Math.floor(viewport.height * pixelRatio);
+          canvas.style.width = `${Math.floor(viewport.width)}px`;
+          canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+          const ctx = canvas.getContext('2d');
+          ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+          ctx.scale(pixelRatio, pixelRatio);
+
+          await page.render({
+            canvasContext: ctx,
+            viewport: viewport
+          }).promise;
+        } catch (err) {
+          console.warn(`[PdfReportViewer] Error rendering page ${pageNum}:`, err);
+        }
+      }
+
+      if (!isCancelled) {
+        setRenderingPages(false);
+      }
+    };
+
+    renderAllPages();
+
+    const handleResize = () => {
+      renderAllPages();
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      isCancelled = true;
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [pdfDoc, numPages, zoomScale]);
+
   if (!isOpen || !inspectionId) return null;
 
   const handleDownload = async () => {
@@ -82,9 +223,9 @@ export function PdfReportViewerModal({
       await reportApi.downloadPdf(inspectionId, filename);
     } catch (err) {
       console.error('Failed to download PDF:', err);
-      // Fallback: direct window download
+      // Direct window download fallback
       const a = document.createElement('a');
-      a.href = `${pdfUrl}?download=true`;
+      a.href = `${pdfUrl}&download=true`;
       a.download = `Inspection_${inspectionId}_Report.pdf`;
       document.body.appendChild(a);
       a.click();
@@ -122,16 +263,19 @@ export function PdfReportViewerModal({
   };
 
   const handlePrint = () => {
-    const iframe = document.getElementById('pdf-report-frame');
-    if (iframe && iframe.contentWindow) {
-      try {
-        iframe.contentWindow.print();
-      } catch (_) {
-        window.open(pdfUrl, '_blank');
-      }
-    } else {
-      window.open(pdfUrl, '_blank');
-    }
+    window.open(pdfUrl, '_blank');
+  };
+
+  const handleZoomIn = () => {
+    setZoomScale(prev => Math.min(prev + 0.25, 2.5));
+  };
+
+  const handleZoomOut = () => {
+    setZoomScale(prev => Math.max(prev - 0.25, 0.6));
+  };
+
+  const handleResetZoom = () => {
+    setZoomScale(1.0);
   };
 
   return (
@@ -169,6 +313,38 @@ export function PdfReportViewerModal({
 
         {/* Right Header Action Buttons */}
         <div className="pdf-viewer-actions">
+          {/* Zoom Controls */}
+          {numPages > 0 && !loading && (
+            <div className="pdf-zoom-bar">
+              <button 
+                type="button" 
+                onClick={handleZoomOut} 
+                className="pdf-zoom-btn" 
+                title="Zoom Out"
+                disabled={zoomScale <= 0.6}
+              >
+                <ZoomOut size={15} />
+              </button>
+              <button 
+                type="button" 
+                onClick={handleResetZoom} 
+                className="pdf-zoom-label-btn" 
+                title="Reset to Fit Width"
+              >
+                {Math.round(zoomScale * 100)}%
+              </button>
+              <button 
+                type="button" 
+                onClick={handleZoomIn} 
+                className="pdf-zoom-btn" 
+                title="Zoom In"
+                disabled={zoomScale >= 2.5}
+              >
+                <ZoomIn size={15} />
+              </button>
+            </div>
+          )}
+
           {/* Native Mobile Share */}
           <button
             type="button"
@@ -205,18 +381,6 @@ export function PdfReportViewerModal({
             <Printer size={16} />
           </button>
 
-          {/* Fallback New Window */}
-          <a
-            href={pdfUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="pdf-btn pdf-btn-icon desktop-only-btn"
-            title="Open in Browser New Tab"
-            aria-label="Open in Browser Tab"
-          >
-            <ExternalLink size={16} />
-          </a>
-
           {/* Close Icon */}
           <button
             type="button"
@@ -230,8 +394,8 @@ export function PdfReportViewerModal({
         </div>
       </header>
 
-      {/* 2. VIEWER BODY CONTAINER */}
-      <div className="pdf-viewer-body">
+      {/* 2. VIEWER BODY CONTAINER (Scrollable HTML5 Canvas Container) */}
+      <div className="pdf-viewer-body" ref={containerRef}>
         {loading && (
           <div className="pdf-viewer-loading">
             <div className="pdf-spinner" />
@@ -239,7 +403,7 @@ export function PdfReportViewerModal({
               Loading Official Inspection Certificate...
             </div>
             <div style={{ marginTop: '0.35rem', color: '#94A3B8', fontSize: '0.8rem' }}>
-              Preparing high-resolution cryptographic document
+              Rendering high-resolution vector report in-app
             </div>
           </div>
         )}
@@ -248,31 +412,38 @@ export function PdfReportViewerModal({
           <div className="pdf-viewer-error">
             <AlertCircle size={36} color="#EF4444" style={{ margin: '0 auto 0.75rem auto' }} />
             <div style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '1rem' }}>
-              Document Preview Unavailable in Mobile Frame
+              Unable to load document preview
             </div>
             <p style={{ color: '#94A3B8', fontSize: '0.85rem', maxWidth: '360px', margin: '0.5rem auto 1.25rem auto' }}>
-              Your mobile device can directly download or open this official certificate.
+              {loadError}
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
               <button onClick={handleDownload} className="btn btn-primary btn-sm">
                 <Download size={15} /> Download PDF File
               </button>
               <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="btn btn-outline btn-sm" style={{ color: '#FFFFFF', borderColor: '#475569' }}>
-                <ExternalLink size={15} /> Open Externally
+                <ExternalLink size={15} /> Open in New Tab
               </a>
             </div>
           </div>
         )}
 
-        {/* Embedded PDF iframe */}
-        <iframe
-          id="pdf-report-frame"
-          src={`${pdfUrl}#toolbar=0&navpanes=0`}
-          title={`Inspection Certificate #${inspectionId}`}
-          className="pdf-iframe-element"
-          onLoad={() => setLoading(false)}
-          onError={() => { setLoading(false); setLoadError(true); }}
-        />
+        {/* In-App Direct Canvas Rendered Pages */}
+        {!loading && !loadError && numPages > 0 && (
+          <div className="pdf-pages-scroll-container">
+            {Array.from({ length: numPages }).map((_, idx) => (
+              <div key={idx} className="pdf-page-wrapper">
+                <div className="pdf-page-indicator">
+                  Page {idx + 1} of {numPages}
+                </div>
+                <canvas 
+                  ref={el => { canvasRefs.current[idx] = el; }} 
+                  className="pdf-page-canvas" 
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 3. MOBILE FLOATING RETURN BAR (Appears on small screens for instant return) */}
