@@ -59,6 +59,11 @@ export function HeroSlider({ slides = [], onCtaClick }) {
             <img
               src={slide.image_url}
               alt={slide.title}
+              width="1200"
+              height="600"
+              loading={idx === 0 ? "eager" : "lazy"}
+              fetchPriority={idx === 0 ? "high" : "low"}
+              decoding={idx === 0 ? "sync" : "async"}
               style={{
                 width: '100%',
                 height: '100%',

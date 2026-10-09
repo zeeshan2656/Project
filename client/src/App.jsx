@@ -4,16 +4,17 @@ import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { ToastContainer } from './components/ToastContainer';
 import { PhotoViewerModal } from './components/PhotoViewerModal';
-import { PdfReportViewerModal } from './components/PdfReportViewerModal';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 
 // Pages
 import { LandingPage } from './pages/LandingPage';
-import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
-import { AdminDashboard } from './pages/admin/AdminDashboard';
-import { CustomerDashboard } from './pages/customer/CustomerDashboard';
-import { EmployeeDashboard } from './pages/employee/EmployeeDashboard';
+
+// Lazy-loaded pages (code-split to eliminate unused JavaScript on landing page)
+const LoginPage = React.lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const RegisterPage = React.lazy(() => import('./pages/RegisterPage').then(m => ({ default: m.RegisterPage })));
+const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const CustomerDashboard = React.lazy(() => import('./pages/customer/CustomerDashboard').then(m => ({ default: m.CustomerDashboard })));
+const EmployeeDashboard = React.lazy(() => import('./pages/employee/EmployeeDashboard').then(m => ({ default: m.EmployeeDashboard })));
 
 // URL pathname helper
 function getViewFromPathname(pathname) {
@@ -75,19 +76,7 @@ export default function App() {
   });
 
   const [activePhoto, setActivePhoto] = useState(null);
-  const [activePdfModal, setActivePdfModal] = useState(null);
   const [dashboardDrawerOpen, setDashboardDrawerOpen] = useState(false);
-
-  // Listen for global PDF Report Viewer requests
-  useEffect(() => {
-    const handleOpenPdf = (e) => {
-      if (e.detail) {
-        setActivePdfModal(e.detail);
-      }
-    };
-    window.addEventListener('apex:open_pdf_modal', handleOpenPdf);
-    return () => window.removeEventListener('apex:open_pdf_modal', handleOpenPdf);
-  }, []);
 
   // Synchronized navigation with HTML5 History API
   const navigate = useCallback((view, search = '') => {
@@ -178,49 +167,44 @@ export default function App() {
       {/* Main View Router - with 72px top offset for sticky fixed header */}
       <main style={{ flex: 1, width: '100%', maxWidth: '100%', overflowX: 'hidden', paddingTop: '72px' }}>
         {currentView === 'landing' && <LandingPage onNavigate={navigate} />}
-        {currentView === 'login' && <LoginPage onNavigate={navigate} />}
-        {currentView === 'register' && <RegisterPage onNavigate={navigate} />}
-        {currentView === 'admin' && isAuthenticated && (
-          <AdminDashboard 
-            onOpenPhoto={handleOpenPhoto}
-            onNavigate={navigate}
-            isMobileDrawerOpen={dashboardDrawerOpen}
-            onCloseMobileDrawer={() => setDashboardDrawerOpen(false)}
-          />
-        )}
-        {currentView === 'customer' && isAuthenticated && (
-          <CustomerDashboard 
-            onOpenPhoto={handleOpenPhoto}
-            onNavigate={navigate}
-            isMobileDrawerOpen={dashboardDrawerOpen}
-            onCloseMobileDrawer={() => setDashboardDrawerOpen(false)}
-          />
-        )}
-        {currentView === 'employee' && isAuthenticated && (
-          <EmployeeDashboard 
-            onOpenPhoto={handleOpenPhoto}
-            onNavigate={navigate}
-            isMobileDrawerOpen={dashboardDrawerOpen}
-            onCloseMobileDrawer={() => setDashboardDrawerOpen(false)}
-          />
-        )}
+        
+        <React.Suspense fallback={
+          <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="pdf-spinner" style={{ width: '32px', height: '32px', borderColor: 'rgba(56, 189, 248, 0.2)', borderTopColor: '#0284C7' }} />
+          </div>
+        }>
+          {currentView === 'login' && <LoginPage onNavigate={navigate} />}
+          {currentView === 'register' && <RegisterPage onNavigate={navigate} />}
+          {currentView === 'admin' && isAuthenticated && (
+            <AdminDashboard 
+              onOpenPhoto={handleOpenPhoto}
+              onNavigate={navigate}
+              isMobileDrawerOpen={dashboardDrawerOpen}
+              onCloseMobileDrawer={() => setDashboardDrawerOpen(false)}
+            />
+          )}
+          {currentView === 'customer' && isAuthenticated && (
+            <CustomerDashboard 
+              onOpenPhoto={handleOpenPhoto}
+              onNavigate={navigate}
+              isMobileDrawerOpen={dashboardDrawerOpen}
+              onCloseMobileDrawer={() => setDashboardDrawerOpen(false)}
+            />
+          )}
+          {currentView === 'employee' && isAuthenticated && (
+            <EmployeeDashboard 
+              onOpenPhoto={handleOpenPhoto}
+              onNavigate={navigate}
+              isMobileDrawerOpen={dashboardDrawerOpen}
+              onCloseMobileDrawer={() => setDashboardDrawerOpen(false)}
+            />
+          )}
+        </React.Suspense>
       </main>
 
       {/* Lightbox Photo Viewer Modal */}
       {activePhoto && (
         <PhotoViewerModal photo={activePhoto} onClose={() => setActivePhoto(null)} />
-      )}
-
-      {/* Global In-App PDF Report Viewer with prominent Return to App */}
-      {activePdfModal && (
-        <PdfReportViewerModal
-          isOpen={!!activePdfModal}
-          onClose={() => setActivePdfModal(null)}
-          inspectionId={activePdfModal.id}
-          title={activePdfModal.title}
-          poNumber={activePdfModal.poNumber}
-          status={activePdfModal.status}
-        />
       )}
 
       {/* Global Footer (Visible on landing page only, removed from login) */}

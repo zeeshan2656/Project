@@ -13,7 +13,7 @@ export function Footer({ onNavigate }) {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
               {logoUrl ? (
-                <img src={logoUrl} alt={companyName} style={{ height: '36px', width: 'auto' }} onError={(e) => { e.target.style.display = 'none'; }} />
+                <img src={logoUrl} alt={companyName} width="160" height="36" loading="lazy" style={{ height: '36px', width: 'auto' }} onError={(e) => { e.target.style.display = 'none'; }} />
               ) : (
                 <div style={{ width: '36px', height: '36px', backgroundColor: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-sm)' }}>
                   <ShieldCheck size={20} color="#FFFFFF" />

@@ -60,7 +60,7 @@ if (!fs.existsSync(MEDIA_DIR)) {
 }
 
 app.use('/media', express.static(MEDIA_DIR, {
-  maxAge: '7d',
+  maxAge: '30d',
   immutable: true
 }));
 console.log(`[Media Storage] Serving media from: ${MEDIA_DIR}`);
@@ -88,15 +88,34 @@ app.use('/api/defects', defectRoutes);
 // Serve Frontend Static Files in Production (Vite React Build)
 const clientDistPath = path.resolve(__dirname, '../../client/dist');
 if (fs.existsSync(clientDistPath)) {
-  app.use(express.static(clientDistPath));
+  // Hashed Vite chunks (JS, CSS) are immutable and cached for 1 year
+  const clientAssetsPath = path.join(clientDistPath, 'assets');
+  if (fs.existsSync(clientAssetsPath)) {
+    app.use('/assets', express.static(clientAssetsPath, {
+      maxAge: '365d',
+      immutable: true
+    }));
+  }
+
+  // General static assets (icons, manifest) with 1-day cache; index.html always validated
+  app.use(express.static(clientDistPath, {
+    maxAge: '1d',
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html') || filePath.endsWith('index.html')) {
+        res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+      }
+    }
+  }));
+
   app.get('*', (req, res, next) => {
     // Pass through API, media, and WebSocket endpoints
     if (req.path.startsWith('/api') || req.path.startsWith('/media') || req.path.startsWith('/socket.io')) {
       return next();
     }
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     res.sendFile(path.join(clientDistPath, 'index.html'));
   });
-  console.log(`[Frontend] Serving React Vite SPA from: ${clientDistPath}`);
+  console.log(`[Frontend] Serving React Vite SPA from: ${clientDistPath} with optimized HTTP caching`);
 }
 
 // Global Error Handler

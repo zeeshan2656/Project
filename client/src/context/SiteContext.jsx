@@ -35,7 +35,17 @@ export function SiteProvider({ children }) {
       const cached = localStorage.getItem('apex_site_slides');
       if (cached) return JSON.parse(cached);
     } catch (_) {}
-    return [];
+    return [
+      {
+        id: 8,
+        title: 'Precision Fabrication & Textile Quality Audits',
+        subtitle: 'Independent Third-Party Mill Auditing & Real-Time Inspection Telemetry Across Pakistan',
+        badge: 'ISO 9001:2015 Accredited',
+        image_url: '/media/slider/Hospital_Bedsheet_1791318185201_542248523.webp',
+        button_text: 'Explore Inspection Scope',
+        button_link: '#services'
+      }
+    ];
   });
   const [loading, setLoading] = useState(true);
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { usersApi, ordersApi, inspectionsApi, reportApi } from '../../services/api';
 import { InspectionReviewModal } from './InspectionReviewModal';
+import { openPdfViewer } from '../../components/PdfReportViewerModal';
 import { 
   UserPlus, 
   Search, 
@@ -1067,7 +1068,11 @@ export function CustomerManagement({ onOpenPhoto }) {
                             rel="noopener noreferrer"
                             className="btn btn-outline btn-sm"
                             style={{ fontSize: '0.75rem', padding: '0.3rem 0.7rem', color: '#DC2626' }}
-                            title="View PDF Certificate in 2nd tab (with choice to download)"
+                            title="View / Download PDF Certificate"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              openPdfViewer(ins.id);
+                            }}
                           >
                             <FileText size={13} />
                             <span>PDF Certificate</span>

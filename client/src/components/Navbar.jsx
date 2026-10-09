@@ -155,6 +155,8 @@ export function Navbar({
             <img 
               src={logoUrl} 
               alt={companyName} 
+              width="160"
+              height="40"
               className="header-logo-img"
               onError={() => setImgError(true)}
             />

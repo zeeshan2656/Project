@@ -49,7 +49,7 @@ export function RegisterPage({ onNavigate }) {
         <div style={{ padding: '2rem 2rem 1.25rem 2rem', textAlign: 'center', backgroundColor: '#0F172A', color: '#FFFFFF' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
             {logoUrl ? (
-              <img src={logoUrl} alt={companyName} style={{ height: '40px', width: 'auto' }} onError={(e) => { e.target.style.display = 'none'; }} />
+              <img src={logoUrl} alt={companyName} width="160" height="40" style={{ height: '40px', width: 'auto' }} onError={(e) => { e.target.style.display = 'none'; }} />
             ) : (
               <div style={{ width: '40px', height: '40px', backgroundColor: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-sm)' }}>
                 <ShieldCheck size={24} color="#FFFFFF" />
