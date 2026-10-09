@@ -88,9 +88,9 @@ export const inspectionsApi = {
   createInspection: (data) => apiRequest('/inspections', { method: 'POST', body: JSON.stringify(data) }),
   startInspection: (id) => apiRequest(`/inspections/${id}/start`, { method: 'PUT' }),
   saveDraft: (id, draftData) => apiRequest(`/inspections/${id}/draft`, { method: 'PUT', body: JSON.stringify(draftData) }),
-  submitInspection,
-  reviewInspection,
-  uploadPhoto,
+  submitInspection: (id, payload) => apiRequest(`/inspections/${id}/submit`, { method: 'POST', body: JSON.stringify(payload) }),
+  reviewInspection: (id, payload) => apiRequest(`/inspections/${id}/review`, { method: 'POST', body: JSON.stringify(payload) }),
+  uploadPhoto: (id, formData) => apiRequest(`/inspections/${id}/photos`, { method: 'POST', body: formData }),
   deleteInspection: (id) => apiRequest(`/inspections/${id}`, { method: 'DELETE' })
 };
 

@@ -7,17 +7,21 @@ import { SiteProvider } from './context/SiteContext';
 import { SocketProvider } from './context/SocketContext';
 import { registerSW } from './registerServiceWorker';
 
+import { ErrorBoundary } from './components/ErrorBoundary';
+
 // Initialize PWA Service Worker
 registerSW();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <AuthProvider>
-      <SiteProvider>
-        <SocketProvider>
-          <App />
-        </SocketProvider>
-      </SiteProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <SiteProvider>
+          <SocketProvider>
+            <App />
+          </SocketProvider>
+        </SiteProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   </React.StrictMode>
 );

@@ -33,7 +33,10 @@ export function SiteProvider({ children }) {
   const [slides, setSlides] = useState(() => {
     try {
       const cached = localStorage.getItem('apex_site_slides');
-      if (cached) return JSON.parse(cached);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
     } catch (_) {}
     return [
       {
@@ -54,7 +57,9 @@ export function SiteProvider({ children }) {
       const res = await siteApi.getSettings();
       if (res && res.success && res.settings) {
         setSettings(res.settings);
-        setSlides(res.slides || []);
+        if (Array.isArray(res.slides) && res.slides.length > 0) {
+          setSlides(res.slides);
+        }
 
         try {
           localStorage.setItem('apex_site_settings', JSON.stringify(res.settings));

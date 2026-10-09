@@ -38,10 +38,84 @@ export function LandingPage({ onNavigate }) {
     }
   };
 
-  const services = settings.services_content || [];
-  const processSteps = settings.process_content || [];
-  const stats = settings.trust_stats || [];
-  const aboutBullets = settings.about_bullets || [];
+  const parseArray = (val, fallback = []) => {
+    if (!val) return fallback;
+    if (Array.isArray(val) && val.length > 0) return val;
+    if (typeof val === 'string') {
+      try {
+        const parsed = JSON.parse(val);
+        return Array.isArray(parsed) && parsed.length > 0 ? parsed : fallback;
+      } catch (_) {
+        return fallback;
+      }
+    }
+    return fallback;
+  };
+
+  const defaultStats = [
+    { value: '14,800+', label: 'Inspections Completed' },
+    { value: '99.4%', label: 'On-Time Mill Arrival' },
+    { value: '65+', label: 'Certified Field Auditors' },
+    { value: '100%', label: 'Independent & Conflict-Free' }
+  ];
+
+  const defaultServices = [
+    {
+      id: 1,
+      title: 'Raw Greige & Finished Fabric Inspection',
+      description: '4-Point and 10-Point system grading on illuminated perch tables. Comprehensive defect tagging, tensile tests, GSM verification, and width uniformity.'
+    },
+    {
+      id: 2,
+      title: 'In-Line & During Production (DUPRO) Audits',
+      description: 'Active line monitoring across cutting, sewing, and assembly to identify systemic defects before bulk lots are finished.'
+    },
+    {
+      id: 3,
+      title: 'Final Random Inspection (FRI / Pre-Shipment)',
+      description: 'Rigorous statistical pre-shipment sign-off. Measurement conformity, packaging integrity, barcode scanning, and carton drop checks.'
+    },
+    {
+      id: 4,
+      title: 'Mill Capability & Technical Audit',
+      description: 'Independent assessment of spinning, weaving, and dyeing facility capacities, machinery calibration, and labor compliance.'
+    }
+  ];
+
+  const defaultProcessSteps = [
+    {
+      step: '01',
+      title: 'Order & PO Onboarding',
+      desc: 'Customer or Admin submits purchase order details, factory coordinates in Pakistan, and required AQL inspection standard.'
+    },
+    {
+      step: '02',
+      title: 'Dynamic Template Assignment',
+      desc: 'Admin pairs the order with a specialized product template and assigns a certified field inspector closest to the mill.'
+    },
+    {
+      step: '03',
+      title: 'On-Site Live Telemetry',
+      desc: 'Inspector checks into the mill; admin dashboard activates \'In Progress\' status. Defects and photos are synchronized live.'
+    },
+    {
+      step: '04',
+      title: 'QA Sign-Off & Instant Export',
+      desc: 'Admin conducts senior QA review, approves or flags for re-inspection, and issues cryptographic PDF/Excel audit certificates.'
+    }
+  ];
+
+  const defaultAboutBullets = [
+    'Zero financial ties to Pakistani manufacturing mills or supplier brokers',
+    'Certified auditors conforming to ISO 17020 and ASQ quality standards',
+    'Real-time GPS check-in verification preventing ghost audit reports',
+    'Defect severity tracking with high-resolution photographic evidence'
+  ];
+
+  const services = parseArray(settings?.services_content, defaultServices);
+  const processSteps = parseArray(settings?.process_content, defaultProcessSteps);
+  const stats = parseArray(settings?.trust_stats, defaultStats);
+  const aboutBullets = parseArray(settings?.about_bullets, defaultAboutBullets);
 
   return (
     <div style={{ backgroundColor: '#F8FAFC' }}>

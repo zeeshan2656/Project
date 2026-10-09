@@ -1,10 +1,8 @@
 /* ApexFabric PWA Service Worker - Production Ready */
-const CACHE_NAME = 'apexfabric-v1.0.0';
+const CACHE_NAME = 'apexfabric-v1.0.3';
 const OFFLINE_URL = '/offline.html';
 
 const PRECACHE_ASSETS = [
-  '/',
-  '/index.html',
   '/offline.html',
   '/manifest.json',
   '/manifest.webmanifest',

@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, ShieldCheck, ArrowRight, Play, Pause, LogIn, UserPlus } from 'lucide-react';
 
 export function HeroSlider({ slides = [], onCtaClick }) {
+  const safeSlides = Array.isArray(slides) && slides.length > 0 ? slides : [];
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const timerRef = useRef(null);
 
-  const total = slides.length;
+  const total = safeSlides.length;
 
   useEffect(() => {
     if (total <= 1 || !isPlaying) return;
@@ -19,14 +20,16 @@ export function HeroSlider({ slides = [], onCtaClick }) {
   }, [total, isPlaying, currentIndex]);
 
   const handleNext = () => {
+    if (total <= 0) return;
     setCurrentIndex((prev) => (prev + 1) % total);
   };
 
   const handlePrev = () => {
+    if (total <= 0) return;
     setCurrentIndex((prev) => (prev - 1 + total) % total);
   };
 
-  if (!slides || slides.length === 0) {
+  if (total === 0) {
     return (
       <div style={{ height: '520px', background: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
         No slider slides configured yet.
@@ -34,7 +37,7 @@ export function HeroSlider({ slides = [], onCtaClick }) {
     );
   }
 
-  const currentSlide = slides[currentIndex];
+  const currentSlide = safeSlides[currentIndex] || safeSlides[0] || {};
 
   return (
     <div 
@@ -44,7 +47,7 @@ export function HeroSlider({ slides = [], onCtaClick }) {
     >
       {/* 1. VISUAL IMAGE STAGE (Full on Desktop, Compact 230px on Mobile) */}
       <div className="hero-image-stage">
-        {slides.map((slide, idx) => (
+        {safeSlides.map((slide, idx) => (
           <div
             key={slide.id || idx}
             className="hero-slide-item"
@@ -151,7 +154,7 @@ export function HeroSlider({ slides = [], onCtaClick }) {
 
         {/* Slide Indicator Dots (Desktop bottom-left / Mobile bottom-left of image) */}
         <div className="hero-dots-bar">
-          {slides.map((_, i) => (
+          {safeSlides.map((_, i) => (
             <button
               key={i}
               onClick={() => setCurrentIndex(i)}

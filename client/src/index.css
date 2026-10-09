@@ -415,10 +415,9 @@ a {
   }
 }
 
-/* Defer Below-The-Fold DOM Layout & Painting */
+/* Below-The-Fold Sections */
 .landing-lazy-section {
-  content-visibility: auto;
-  contain-intrinsic-size: 1px 600px;
+  content-visibility: visible;
 }
 
 /* Floating WhatsApp Button */

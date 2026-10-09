@@ -106,13 +106,15 @@ if (fs.existsSync(clientDistPath)) {
     }));
   }
 
-  // General static assets (icons, manifest) with 1-day cache; index.html edge-cached for instant TTFB
-  const htmlCacheHeader = 'public, max-age=0, s-maxage=300, stale-while-revalidate=86400';
+  // General static assets (icons, manifest) with 1-day cache; index.html must never be stale-cached
+  const htmlCacheHeader = 'no-cache, no-store, must-revalidate';
   app.use(express.static(clientDistPath, {
     maxAge: '1d',
     setHeaders: (res, filePath) => {
       if (filePath.endsWith('.html') || filePath.endsWith('index.html')) {
         res.setHeader('Cache-Control', htmlCacheHeader);
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
       }
     }
   }));
@@ -123,6 +125,8 @@ if (fs.existsSync(clientDistPath)) {
       return next();
     }
     res.setHeader('Cache-Control', htmlCacheHeader);
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(path.join(clientDistPath, 'index.html'));
   });
   console.log(`[Frontend] Serving React Vite SPA from: ${clientDistPath} with CDN edge cache optimization`);
