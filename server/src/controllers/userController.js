@@ -11,7 +11,7 @@ async function getCustomers(req, res) {
              COUNT(o.id) AS total_orders
       FROM users u
       LEFT JOIN orders o ON o.customer_id = u.id
-      WHERE u.role = 'customer'
+      WHERE u.role = 'customer' AND (u.is_deleted = 0 OR u.is_deleted IS NULL)
       GROUP BY u.id
       ORDER BY u.id DESC
     `);
@@ -69,7 +69,7 @@ async function getEmployees(req, res) {
              SUM(CASE WHEN ins.status IN ('Not Started', 'In Progress', 'Needs Re-inspection') THEN 1 ELSE 0 END) AS active_tasks
       FROM users u
       LEFT JOIN inspection_sheets ins ON ins.assigned_employee_id = u.id
-      WHERE u.role = 'employee'
+      WHERE u.role = 'employee' AND (u.is_deleted = 0 OR u.is_deleted IS NULL)
       GROUP BY u.id
       ORDER BY u.id ASC
     `);
@@ -420,6 +420,74 @@ async function createAdmin(req, res) {
   }
 }
 
+/**
+ * Admin: Delete Customer Account
+ * If customer has orders, soft-delete so historical orders and inspection history remain undisturbed.
+ * If customer has no orders, hard delete safely.
+ */
+async function deleteCustomer(req, res) {
+  try {
+    const { id } = req.params;
+    const users = await query('SELECT id, name, role FROM users WHERE id = ? AND role = "customer"', [id]);
+    if (users.length === 0) {
+      return res.status(404).json({ success: false, message: 'Client account not found.' });
+    }
+
+    const orderRows = await query('SELECT id FROM orders WHERE customer_id = ?', [id]);
+    if (orderRows.length > 0) {
+      await query('UPDATE users SET is_deleted = 1, status = "inactive" WHERE id = ?', [id]);
+      return res.json({
+        success: true,
+        message: `Client "${users[0].name}" removed from client list (historical purchase orders and inspection records preserved without disturbance).`
+      });
+    }
+
+    await query('DELETE FROM users WHERE id = ? AND role = "customer"', [id]);
+    return res.json({
+      success: true,
+      message: `Client "${users[0].name}" deleted successfully.`
+    });
+  } catch (err) {
+    console.error('Error deleting client:', err);
+    return res.status(500).json({ success: false, message: 'Failed to delete client: ' + err.message });
+  }
+}
+
+/**
+ * Admin: Delete Employee / Field Inspector
+ * If employee has assigned inspection sheets or audit logs, soft-delete so historical audit reports remain undisturbed.
+ * If employee has no inspections, hard delete safely.
+ */
+async function deleteEmployee(req, res) {
+  try {
+    const { id } = req.params;
+    const users = await query('SELECT id, name, role FROM users WHERE id = ? AND role = "employee"', [id]);
+    if (users.length === 0) {
+      return res.status(404).json({ success: false, message: 'Inspector account not found.' });
+    }
+
+    const sheetRows = await query('SELECT id FROM inspection_sheets WHERE assigned_employee_id = ?', [id]);
+    const logRows = await query('SELECT id FROM inspection_audit_logs WHERE actor_id = ?', [id]);
+
+    if (sheetRows.length > 0 || logRows.length > 0) {
+      await query('UPDATE users SET is_deleted = 1, status = "inactive" WHERE id = ?', [id]);
+      return res.json({
+        success: true,
+        message: `Inspector "${users[0].name}" removed from active roster (historical inspection reports and audit signatures preserved without disturbance).`
+      });
+    }
+
+    await query('DELETE FROM users WHERE id = ? AND role = "employee"', [id]);
+    return res.json({
+      success: true,
+      message: `Inspector "${users[0].name}" deleted successfully.`
+    });
+  } catch (err) {
+    console.error('Error deleting inspector:', err);
+    return res.status(500).json({ success: false, message: 'Failed to delete inspector: ' + err.message });
+  }
+}
+
 module.exports = {
   getCustomers,
   createCustomer,
@@ -431,5 +499,8 @@ module.exports = {
   updateUserPassword,
   getCustomerDetailsAndOrders,
   getEmployeeDetailsAndInspections,
-  toggleUserStatus
+  toggleUserStatus,
+  deleteCustomer,
+  deleteEmployee
 };
+

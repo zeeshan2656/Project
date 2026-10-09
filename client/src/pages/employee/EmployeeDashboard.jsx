@@ -176,7 +176,7 @@ export function EmployeeDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen,
   });
 
   return (
-    <div className="dashboard-container">
+    <div className="dashboard-container employee-dashboard-theme">
       {/* DESKTOP SIDEBAR */}
       <aside className="dashboard-sidebar">
         <div>
@@ -282,7 +282,7 @@ export function EmployeeDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen,
 
 
       {/* MAIN CONTENT AREA */}
-      <main className="dashboard-main">
+      <main className="dashboard-main employee-dashboard-theme">
         {/* Top Header */}
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '2rem', paddingBottom: '1.25rem', borderBottom: '1px solid #E2E8F0' }}>
           <div>

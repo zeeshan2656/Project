@@ -16,6 +16,7 @@ import {
   EyeOff, 
   Key, 
   Edit2, 
+  Trash2,
   List, 
   LayoutGrid, 
   CheckCircle, 
@@ -228,6 +229,26 @@ export function EmployeeManagement({ onOpenPhoto }) {
       }
     } catch (err) {
       alert('Failed to update status.');
+    }
+  };
+
+  // Delete Field Inspector Account
+  const handleDeleteEmployee = async (emp) => {
+    const confirmMsg = `Are you sure you want to delete inspector "${emp.name}" (${emp.employee_code})?\n\n` +
+      (emp.total_inspections > 0
+        ? `Note: This inspector is linked to ${emp.total_inspections} audit sheet(s). The account will be archived safely so historical audit reports, telemetry, and signatures remain undisturbed.`
+        : `This inspector account will be permanently deleted.`);
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      const res = await usersApi.deleteEmployee(emp.id);
+      if (res && res.success) {
+        setActionSuccessMessage(res.message || `Inspector "${emp.name}" deleted successfully.`);
+        setTimeout(() => setActionSuccessMessage(''), 5000);
+        fetchEmployees();
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to delete inspector account.');
     }
   };
 
@@ -527,7 +548,18 @@ export function EmployeeManagement({ onOpenPhoto }) {
                             title="Edit inspector profile & reset password"
                           >
                             <Edit2 size={13} />
-                            <span>Edit / Key</span>
+                            <span>Edit</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteEmployee(emp)}
+                            className="btn btn-outline btn-sm"
+                            style={{ color: '#DC2626', borderColor: '#FECACA', fontWeight: 600, padding: '0.25rem 0.55rem', fontSize: '0.75rem' }}
+                            title="Delete inspector account"
+                          >
+                            <Trash2 size={13} color="#DC2626" />
+                            <span>Delete</span>
                           </button>
                         </div>
                       </td>
@@ -671,6 +703,15 @@ export function EmployeeManagement({ onOpenPhoto }) {
                     >
                       <Edit2 size={13} />
                       <span>Edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteEmployee(emp)}
+                      className="btn btn-outline btn-sm"
+                      style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem', color: '#DC2626', borderColor: '#FECACA' }}
+                      title="Delete Inspector Account"
+                    >
+                      <Trash2 size={13} color="#DC2626" />
                     </button>
                   </div>
                 </div>

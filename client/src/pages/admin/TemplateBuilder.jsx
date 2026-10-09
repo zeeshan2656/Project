@@ -1515,13 +1515,33 @@ export function TemplateBuilder() {
 
             {/* Modal Footer */}
             <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid #E2E8F0', backgroundColor: '#F8FAFC', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="btn btn-outline"
-              >
-                Cancel
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="btn btn-outline"
+                >
+                  Cancel
+                </button>
+                {editingTemplateId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const curTmpl = templates.find(t => t.id === editingTemplateId);
+                      if (curTmpl) {
+                        handleDeleteTemplate(curTmpl);
+                        setShowModal(false);
+                      }
+                    }}
+                    className="btn btn-outline"
+                    style={{ color: '#DC2626', borderColor: '#FECACA' }}
+                    title="Delete template"
+                  >
+                    <Trash2 size={15} color="#DC2626" />
+                    <span>Delete Template</span>
+                  </button>
+                )}
+              </div>
 
               <button
                 type="button"

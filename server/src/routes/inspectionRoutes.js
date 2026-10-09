@@ -8,7 +8,8 @@ const {
   saveDraft,
   submitInspection,
   reviewInspection,
-  uploadPhoto
+  uploadPhoto,
+  deleteInspection
 } = require('../controllers/inspectionController');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { upload, convertToWebp } = require('../middleware/upload');
@@ -19,6 +20,9 @@ router.get('/:id', authenticate, getInspectionById);
 
 // Admin: Generate and assign sheet to employee
 router.post('/', authenticate, requireRole(['admin']), createInspection);
+
+// Admin: Delete inspection sheet
+router.delete('/:id', authenticate, requireRole(['admin']), deleteInspection);
 
 // Field Employee Workflow:
 // 1. Open sheet -> In Progress
@@ -37,3 +41,4 @@ router.post('/:id/photos', authenticate, requireRole(['employee', 'admin']), upl
 router.post('/:id/review', authenticate, requireRole(['admin']), reviewInspection);
 
 module.exports = router;
+

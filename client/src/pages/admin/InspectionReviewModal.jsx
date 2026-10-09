@@ -14,6 +14,7 @@ import {
   Percent, 
   Camera, 
   History,
+  Trash2,
   ExternalLink
 } from 'lucide-react';
 
@@ -46,6 +47,23 @@ export function InspectionReviewModal({ inspection, onClose, onRefresh, onOpenPh
     } catch (err) {
       setError(err.message || 'Failed to submit review.');
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteInspection = async () => {
+    const confirmMsg = `Are you sure you want to delete inspection sheet #${inspection.sheet_number}?\n\nDeleting this inspection will not disturb the parent order (order status will be cleanly reset to Unassigned or updated to other active audits).`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setLoading(true);
+    try {
+      const res = await inspectionsApi.deleteInspection(inspection.id);
+      if (res && res.success) {
+        onRefresh();
+        onClose();
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to delete inspection sheet.');
       setLoading(false);
     }
   };
@@ -445,6 +463,18 @@ export function InspectionReviewModal({ inspection, onClose, onRefresh, onOpenPh
               <Download size={14} color="#16A34A" />
               <span>Excel Report</span>
             </a>
+
+            <button
+              type="button"
+              onClick={handleDeleteInspection}
+              disabled={loading}
+              className="btn btn-outline btn-sm"
+              style={{ color: '#DC2626', borderColor: '#FECACA', fontWeight: 600 }}
+              title="Delete Inspection Sheet"
+            >
+              <Trash2 size={14} color="#DC2626" />
+              <span>Delete Sheet</span>
+            </button>
           </div>
 
 

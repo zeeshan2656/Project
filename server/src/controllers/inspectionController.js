@@ -30,14 +30,14 @@ async function getInspections(req, res) {
              o.order_number, o.po_number, o.product_type, o.factory_name, o.factory_city, o.factory_address,
              o.factory_contact_name, o.factory_contact_phone, o.factory_map_url,
              cust.name AS customer_name, cust.company_name AS customer_company,
-             tmpl.title AS template_title,
+             COALESCE(tmpl.title, 'Standard Protocol') AS template_title,
              emp.name AS assigned_employee_name, emp.employee_code AS assigned_employee_code, emp.phone AS employee_phone,
              (SELECT COUNT(*) FROM inspection_photos WHERE sheet_id = ins.id) AS photo_count
       FROM inspection_sheets ins
-      JOIN orders o ON ins.order_id = o.id
-      JOIN users cust ON o.customer_id = cust.id
-      JOIN inspection_templates tmpl ON ins.template_id = tmpl.id
-      JOIN users emp ON ins.assigned_employee_id = emp.id
+      LEFT JOIN orders o ON ins.order_id = o.id
+      LEFT JOIN users cust ON o.customer_id = cust.id
+      LEFT JOIN inspection_templates tmpl ON ins.template_id = tmpl.id
+      LEFT JOIN users emp ON ins.assigned_employee_id = emp.id
       WHERE 1=1
     `;
     const params = [];
@@ -95,17 +95,17 @@ async function getInspectionById(req, res) {
              o.total_quantity AS order_total_quantity,
              o.factory_name, o.factory_city, o.factory_address, o.factory_contact_name, o.factory_contact_phone, o.factory_map_url,
              cust.id AS customer_id, cust.name AS customer_name, cust.company_name AS customer_company, cust.email AS customer_email,
-             tmpl.id AS template_id, tmpl.title AS template_title, tmpl.product_type AS template_product_type,
+             tmpl.id AS template_id, COALESCE(tmpl.title, 'Standard Protocol') AS template_title, tmpl.product_type AS template_product_type,
              tmpl.disposition_config, tmpl.auditor_config, tmpl.order_autofill_config, tmpl.sampling_plan_config,
              tmpl.defect_master_config, tmpl.severity_config, tmpl.calculations_config, tmpl.aql_config,
              tmpl.dimensional_config, tmpl.sections_config, tmpl.validation_config,
              emp.id AS assigned_employee_id, emp.name AS assigned_employee_name, emp.employee_code AS assigned_employee_code, emp.phone AS employee_phone,
              reviewer.name AS reviewer_name
       FROM inspection_sheets ins
-      JOIN orders o ON ins.order_id = o.id
-      JOIN users cust ON o.customer_id = cust.id
-      JOIN inspection_templates tmpl ON ins.template_id = tmpl.id
-      JOIN users emp ON ins.assigned_employee_id = emp.id
+      LEFT JOIN orders o ON ins.order_id = o.id
+      LEFT JOIN users cust ON o.customer_id = cust.id
+      LEFT JOIN inspection_templates tmpl ON ins.template_id = tmpl.id
+      LEFT JOIN users emp ON ins.assigned_employee_id = emp.id
       LEFT JOIN users reviewer ON ins.reviewed_by = reviewer.id
       WHERE ins.id = ?
     `;
@@ -960,6 +960,56 @@ async function uploadPhoto(req, res) {
   }
 }
 
+/**
+ * Admin: Delete Inspection Sheet
+ * Cascades to child photos, field values, and audit logs.
+ * Synchronizes parent order status cleanly: resets to 'Unassigned' if no remaining sheets,
+ * or updates to the latest remaining sheet status.
+ */
+async function deleteInspection(req, res) {
+  try {
+    const { id } = req.params;
+    const inspectionRows = await query('SELECT * FROM inspection_sheets WHERE id = ?', [id]);
+    if (inspectionRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Inspection sheet not found.' });
+    }
+    const inspection = inspectionRows[0];
+    const orderId = inspection.order_id;
+
+    await transaction(async (conn) => {
+      // 1. Delete associated logs, photos, and field values
+      await conn.execute('DELETE FROM inspection_audit_logs WHERE sheet_id = ?', [id]);
+      await conn.execute('DELETE FROM inspection_photos WHERE sheet_id = ?', [id]);
+      await conn.execute('DELETE FROM inspection_field_values WHERE sheet_id = ?', [id]);
+      
+      // 2. Delete the inspection sheet
+      await conn.execute('DELETE FROM inspection_sheets WHERE id = ?', [id]);
+
+      // 3. Check remaining inspection sheets for this order
+      const [remaining] = await conn.execute(
+        'SELECT status FROM inspection_sheets WHERE order_id = ? ORDER BY id DESC',
+        [orderId]
+      );
+
+      if (remaining.length === 0) {
+        // No more inspections left for this order -> safely reset to Unassigned
+        await conn.execute('UPDATE orders SET inspection_status = "Unassigned" WHERE id = ?', [orderId]);
+      } else {
+        // Update to status of the latest remaining inspection sheet
+        await conn.execute('UPDATE orders SET inspection_status = ? WHERE id = ?', [remaining[0].status, orderId]);
+      }
+    });
+
+    return res.json({
+      success: true,
+      message: `Inspection sheet #${inspection.sheet_number} deleted successfully. Order status updated accordingly.`
+    });
+  } catch (err) {
+    console.error('Error deleting inspection:', err);
+    return res.status(500).json({ success: false, message: 'Failed to delete inspection: ' + err.message });
+  }
+}
+
 module.exports = {
   getInspections,
   getInspectionById,
@@ -968,5 +1018,7 @@ module.exports = {
   saveDraft,
   submitInspection,
   reviewInspection,
-  uploadPhoto
+  uploadPhoto,
+  deleteInspection
 };
+

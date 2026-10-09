@@ -340,10 +340,27 @@ async function updateOrder(req, res) {
 async function deleteOrder(req, res) {
   try {
     const { id } = req.params;
-    await query('DELETE FROM orders WHERE id = ?', [id]);
-    return res.json({ success: true, message: 'Order deleted successfully.' });
+    const orderRows = await query('SELECT id, order_number FROM orders WHERE id = ?', [id]);
+    if (orderRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Order not found.' });
+    }
+    const order = orderRows[0];
+
+    await transaction(async (conn) => {
+      const [sheets] = await conn.execute('SELECT id FROM inspection_sheets WHERE order_id = ?', [id]);
+      for (const s of sheets) {
+        await conn.execute('DELETE FROM inspection_audit_logs WHERE sheet_id = ?', [s.id]);
+        await conn.execute('DELETE FROM inspection_photos WHERE sheet_id = ?', [s.id]);
+        await conn.execute('DELETE FROM inspection_field_values WHERE sheet_id = ?', [s.id]);
+      }
+      await conn.execute('DELETE FROM inspection_sheets WHERE order_id = ?', [id]);
+      await conn.execute('DELETE FROM orders WHERE id = ?', [id]);
+    });
+
+    return res.json({ success: true, message: `Order #${order.order_number} and all associated records deleted successfully.` });
   } catch (err) {
-    return res.status(500).json({ success: false, message: 'Failed to delete order.' });
+    console.error('Error deleting order:', err);
+    return res.status(500).json({ success: false, message: 'Failed to delete order: ' + err.message });
   }
 }
 

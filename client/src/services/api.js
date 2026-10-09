@@ -88,18 +88,21 @@ export const inspectionsApi = {
   createInspection: (data) => apiRequest('/inspections', { method: 'POST', body: JSON.stringify(data) }),
   startInspection: (id) => apiRequest(`/inspections/${id}/start`, { method: 'PUT' }),
   saveDraft: (id, draftData) => apiRequest(`/inspections/${id}/draft`, { method: 'PUT', body: JSON.stringify(draftData) }),
-  submitInspection: (id, submitData) => apiRequest(`/inspections/${id}/submit`, { method: 'POST', body: JSON.stringify(submitData) }),
-  reviewInspection: (id, reviewData) => apiRequest(`/inspections/${id}/review`, { method: 'POST', body: JSON.stringify(reviewData) }),
-  uploadPhoto: (id, formData) => apiRequest(`/inspections/${id}/photos`, { method: 'POST', body: formData })
+  submitInspection,
+  reviewInspection,
+  uploadPhoto,
+  deleteInspection: (id) => apiRequest(`/inspections/${id}`, { method: 'DELETE' })
 };
 
 // 6. User Management API
 export const usersApi = {
   getCustomers: () => apiRequest('/users/customers'),
   createCustomer: (data) => apiRequest('/users/customers', { method: 'POST', body: JSON.stringify(data) }),
+  deleteCustomer: (id) => apiRequest(`/users/customers/${id}`, { method: 'DELETE' }),
   getCustomerOrders: (id) => apiRequest(`/users/customers/${id}/orders`),
   getEmployees: () => apiRequest('/users/employees'),
   createEmployee: (data) => apiRequest('/users/employees', { method: 'POST', body: JSON.stringify(data) }),
+  deleteEmployee: (id) => apiRequest(`/users/employees/${id}`, { method: 'DELETE' }),
   getEmployeeInspections: (id) => apiRequest(`/users/employees/${id}/inspections`),
   getAdmins: () => apiRequest('/users/admins'),
   createAdmin: (data) => apiRequest('/users/admins', { method: 'POST', body: JSON.stringify(data) }),

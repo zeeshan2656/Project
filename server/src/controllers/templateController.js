@@ -45,8 +45,8 @@ async function getTemplates(req, res) {
              (SELECT COUNT(*) FROM template_fields WHERE template_id = t.id) AS field_count,
              (SELECT COUNT(*) FROM inspection_sheets WHERE template_id = t.id) AS usage_count
       FROM inspection_templates t
-      JOIN users u ON t.created_by = u.id
-      WHERE t.is_active = 1
+      LEFT JOIN users u ON t.created_by = u.id
+      WHERE t.is_active = 1 AND (t.is_deleted = 0 OR t.is_deleted IS NULL)
       ORDER BY t.id DESC
     `);
 
@@ -304,19 +304,27 @@ async function updateTemplate(req, res) {
 async function deleteTemplate(req, res) {
   try {
     const { id } = req.params;
-    // Check if in use
+    const tmplRows = await query('SELECT id, title FROM inspection_templates WHERE id = ?', [id]);
+    if (tmplRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Inspection template not found.' });
+    }
+    const tmpl = tmplRows[0];
+
+    // Check if in use by existing inspections
     const usage = await query('SELECT id FROM inspection_sheets WHERE template_id = ?', [id]);
     if (usage.length > 0) {
-      // Soft-delete so existing inspection history is preserved
-      await query('UPDATE inspection_templates SET is_active = 0 WHERE id = ?', [id]);
+      // Soft-delete so existing inspection history, field values, and reports are 100% undisturbed!
+      await query('UPDATE inspection_templates SET is_active = 0, is_deleted = 1 WHERE id = ?', [id]);
       return res.json({
         success: true,
-        message: 'Template deleted successfully (archived to preserve historical inspection reports).'
+        message: `Template "${tmpl.title}" deleted successfully (archived to preserve ${usage.length} existing historical inspection report(s) without disturbance).`
       });
     }
 
+    // Permanently remove if unused
+    await query('DELETE FROM template_fields WHERE template_id = ?', [id]);
     await query('DELETE FROM inspection_templates WHERE id = ?', [id]);
-    return res.json({ success: true, message: 'Template deleted successfully.' });
+    return res.json({ success: true, message: `Template "${tmpl.title}" deleted successfully.` });
   } catch (err) {
     console.error('Error deleting template:', err);
     return res.status(500).json({ success: false, message: 'Failed to delete template: ' + err.message });

@@ -18,7 +18,8 @@ import {
   RefreshCw,
   Clock,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  Trash2
 } from 'lucide-react';
 
 export function InspectionManagement({ onOpenPhoto }) {
@@ -83,6 +84,22 @@ export function InspectionManagement({ onOpenPhoto }) {
       }
     } catch (err) {
       alert('Failed to load inspection details.');
+    }
+  };
+
+  // Delete inspection sheet
+  const handleDeleteInspection = async (ins) => {
+    const confirmMsg = `Are you sure you want to delete inspection sheet #${ins.sheet_number} (Order: ${ins.order_number})?\n\nDeleting this inspection will not disturb the parent order (order status will be cleanly reset to Unassigned or updated to other active audits).`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      const res = await inspectionsApi.deleteInspection(ins.id);
+      if (res && res.success) {
+        setSelectedInspection(null);
+        fetchInspections();
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to delete inspection sheet.');
     }
   };
 
@@ -420,6 +437,15 @@ export function InspectionManagement({ onOpenPhoto }) {
                         <FileText size={16} />
                       </button>
 
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteInspection(ins)}
+                        className="btn btn-ghost btn-sm"
+                        style={{ color: '#DC2626', padding: '4px' }}
+                        title="Delete Inspection Sheet"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </td>
                 </tr>

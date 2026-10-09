@@ -16,6 +16,7 @@ import {
   EyeOff, 
   Key, 
   Edit2, 
+  Trash2,
   ShoppingBag, 
   List, 
   LayoutGrid, 
@@ -258,6 +259,26 @@ export function CustomerManagement({ onOpenPhoto }) {
       }
     } catch (err) {
       alert('Failed to update status.');
+    }
+  };
+
+  // Delete Customer Account
+  const handleDeleteCustomer = async (c) => {
+    const confirmMsg = `Are you sure you want to delete client account "${c.name}" (${c.company_name || 'Independent'})?\n\n` +
+      (c.total_orders > 0
+        ? `Note: This client has ${c.total_orders} purchase order(s). The account will be archived safely so all past purchase orders, inspection certificates, and reports remain undisturbed.`
+        : `This client account will be permanently deleted.`);
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      const res = await usersApi.deleteCustomer(c.id);
+      if (res && res.success) {
+        setActionSuccessMessage(res.message || `Client "${c.name}" deleted successfully.`);
+        setTimeout(() => setActionSuccessMessage(''), 5000);
+        fetchCustomers();
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to delete client account.');
     }
   };
 
@@ -538,7 +559,18 @@ export function CustomerManagement({ onOpenPhoto }) {
                             title="Edit profile & reset password"
                           >
                             <Edit2 size={13} />
-                            <span>Edit / Key</span>
+                            <span>Edit</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCustomer(c)}
+                            className="btn btn-outline btn-sm"
+                            style={{ color: '#DC2626', borderColor: '#FECACA', fontWeight: 600, padding: '0.25rem 0.55rem', fontSize: '0.75rem' }}
+                            title="Delete client account"
+                          >
+                            <Trash2 size={13} color="#DC2626" />
+                            <span>Delete</span>
                           </button>
                         </div>
                       </td>
@@ -662,6 +694,15 @@ export function CustomerManagement({ onOpenPhoto }) {
                     >
                       <Edit2 size={13} />
                       <span>Edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteCustomer(c)}
+                      className="btn btn-outline btn-sm"
+                      style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem', color: '#DC2626', borderColor: '#FECACA' }}
+                      title="Delete Client Account"
+                    >
+                      <Trash2 size={13} color="#DC2626" />
                     </button>
                   </div>
                 </div>

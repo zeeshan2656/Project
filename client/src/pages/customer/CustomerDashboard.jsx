@@ -236,7 +236,7 @@ export function CustomerDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen,
   });
 
   return (
-    <div className="dashboard-container">
+    <div className="dashboard-container customer-dashboard-theme">
       {/* DESKTOP SIDEBAR */}
       <aside className="dashboard-sidebar">
         <div>
@@ -338,7 +338,7 @@ export function CustomerDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen,
       </aside>
 
       {/* MAIN CONTENT AREA */}
-      <main className="dashboard-main">
+      <main className="dashboard-main customer-dashboard-theme">
         {/* Top Header */}
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '2rem', paddingBottom: '1.25rem', borderBottom: '1px solid #E2E8F0' }}>
           <div>

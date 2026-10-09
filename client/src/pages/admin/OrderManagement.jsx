@@ -25,6 +25,7 @@ import {
   ClipboardList,
   ClipboardCheck,
   AlertCircle,
+  Trash2,
   Filter,
   RefreshCw
 } from 'lucide-react';
@@ -228,6 +229,27 @@ export function OrderManagement({ onOpenPhoto }) {
       setAssignError(err.message || 'Failed to assign auditor.');
     } finally {
       setAssigning(false);
+    }
+  };
+
+  // Delete Order
+  const handleDeleteOrder = async (order) => {
+    const confirmMsg = `Are you sure you want to delete order #${order.order_number} (PO: ${order.po_number})?\n\n` +
+      ((order.inspections_count > 0 || order.sheet_id)
+        ? `Warning: This order has associated inspection audit(s). All related inspection sheets, defect findings, and photos for this order will also be deleted.`
+        : `This order will be permanently deleted.`);
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      const res = await ordersApi.deleteOrder(order.id);
+      if (res && res.success) {
+        setActionSuccessMessage(res.message || `Order #${order.order_number} deleted successfully.`);
+        setTimeout(() => setActionSuccessMessage(''), 5000);
+        setSelectedOrder(null);
+        fetchOrders();
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to delete order.');
     }
   };
 
@@ -592,6 +614,16 @@ export function OrderManagement({ onOpenPhoto }) {
                         <Plus size={13} />
                         <span>{o.inspections_count > 0 ? '+ Audit' : 'Assign'}</span>
                       </button>
+
+                      {/* Delete Order Button */}
+                      <button
+                        onClick={() => handleDeleteOrder(o)}
+                        className="btn btn-outline btn-sm"
+                        style={{ color: '#DC2626', borderColor: '#FECACA', padding: '0.3rem 0.55rem' }}
+                        title="Delete order"
+                      >
+                        <Trash2 size={13} color="#DC2626" />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -724,6 +756,14 @@ export function OrderManagement({ onOpenPhoto }) {
                   >
                     <Plus size={13} />
                     <span>{(o.inspections_count > 0 || o.sheet_id) ? '+ Inspection' : 'Assign'}</span>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteOrder(o)}
+                    className="btn btn-outline btn-sm"
+                    style={{ padding: '0.3rem 0.55rem', color: '#DC2626', borderColor: '#FECACA' }}
+                    title="Delete order"
+                  >
+                    <Trash2 size={13} color="#DC2626" />
                   </button>
                 </div>
               </div>
@@ -1039,6 +1079,16 @@ export function OrderManagement({ onOpenPhoto }) {
               </button>
 
               <div className="review-order-footer-actions">
+                <button
+                  type="button"
+                  onClick={() => handleDeleteOrder(selectedOrder)}
+                  className="btn btn-outline btn-sm"
+                  style={{ color: '#DC2626', borderColor: '#FECACA' }}
+                  title="Delete Order and all child inspection records"
+                >
+                  <Trash2 size={14} color="#DC2626" />
+                  <span>Delete Order</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => setSelectedOrder(null)}
