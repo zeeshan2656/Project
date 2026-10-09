@@ -56,21 +56,25 @@ export function HeroSlider({ slides = [], onCtaClick }) {
               zIndex: idx === currentIndex ? 1 : 0
             }}
           >
-            <img
-              src={slide.image_url}
-              alt={slide.title}
-              width="1200"
-              height="600"
-              loading={idx === 0 ? "eager" : "lazy"}
-              fetchPriority={idx === 0 ? "high" : "low"}
-              decoding={idx === 0 ? "sync" : "async"}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                objectPosition: 'center 35%'
-              }}
-            />
+            <picture style={{ width: '100%', height: '100%', display: 'block' }}>
+              <source srcSet={slide.image_url ? slide.image_url.replace(/\.webp$/, '.avif') : ''} type="image/avif" />
+              <img
+                src={slide.image_url}
+                alt={slide.title}
+                width="1200"
+                height="600"
+                loading={idx === 0 ? "eager" : "lazy"}
+                fetchPriority={idx === 0 ? "high" : "low"}
+                decoding={idx === 0 ? "sync" : "async"}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  objectPosition: 'center 35%',
+                  display: 'block'
+                }}
+              />
+            </picture>
             {/* Cinematic multi-gradient overlay for desktop */}
             <div
               className="hero-desktop-overlay"
@@ -153,13 +157,16 @@ export function HeroSlider({ slides = [], onCtaClick }) {
               onClick={() => setCurrentIndex(i)}
               aria-label={`Go to slide ${i + 1}`}
               style={{
-                width: i === currentIndex ? '26px' : '8px',
+                width: '26px',
                 height: '4px',
                 borderRadius: '2px',
                 backgroundColor: i === currentIndex ? '#38BDF8' : 'rgba(255, 255, 255, 0.4)',
                 border: 'none',
                 cursor: 'pointer',
-                transition: 'all 300ms ease'
+                transformOrigin: 'left center',
+                transform: i === currentIndex ? 'scaleX(1)' : 'scaleX(0.308)',
+                willChange: 'transform',
+                transition: 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1), background-color 300ms ease'
               }}
             />
           ))}

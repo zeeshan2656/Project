@@ -60,7 +60,7 @@ if (!fs.existsSync(MEDIA_DIR)) {
 }
 
 app.use('/media', express.static(MEDIA_DIR, {
-  maxAge: '30d',
+  maxAge: '365d',
   immutable: true
 }));
 console.log(`[Media Storage] Serving media from: ${MEDIA_DIR}`);
@@ -97,12 +97,22 @@ if (fs.existsSync(clientDistPath)) {
     }));
   }
 
-  // General static assets (icons, manifest) with 1-day cache; index.html always validated
+  // Self-hosted fonts cached for 1 year
+  const clientFontsPath = path.join(clientDistPath, 'fonts');
+  if (fs.existsSync(clientFontsPath)) {
+    app.use('/fonts', express.static(clientFontsPath, {
+      maxAge: '365d',
+      immutable: true
+    }));
+  }
+
+  // General static assets (icons, manifest) with 1-day cache; index.html edge-cached for instant TTFB
+  const htmlCacheHeader = 'public, max-age=0, s-maxage=300, stale-while-revalidate=86400';
   app.use(express.static(clientDistPath, {
     maxAge: '1d',
     setHeaders: (res, filePath) => {
       if (filePath.endsWith('.html') || filePath.endsWith('index.html')) {
-        res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+        res.setHeader('Cache-Control', htmlCacheHeader);
       }
     }
   }));
@@ -112,10 +122,10 @@ if (fs.existsSync(clientDistPath)) {
     if (req.path.startsWith('/api') || req.path.startsWith('/media') || req.path.startsWith('/socket.io')) {
       return next();
     }
-    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    res.setHeader('Cache-Control', htmlCacheHeader);
     res.sendFile(path.join(clientDistPath, 'index.html'));
   });
-  console.log(`[Frontend] Serving React Vite SPA from: ${clientDistPath} with optimized HTTP caching`);
+  console.log(`[Frontend] Serving React Vite SPA from: ${clientDistPath} with CDN edge cache optimization`);
 }
 
 // Global Error Handler

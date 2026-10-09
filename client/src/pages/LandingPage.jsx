@@ -67,7 +67,7 @@ export function LandingPage({ onNavigate }) {
       </section>
 
       {/* 3. Core Fabrication Services */}
-      <section id="services" style={{ padding: '5.5rem 0', backgroundColor: '#FFFFFF' }}>
+      <section id="services" className="landing-lazy-section" style={{ padding: '5.5rem 0', backgroundColor: '#FFFFFF' }}>
         <div className="container">
           <div style={{ textAlign: 'center', maxWidth: '720px', margin: '0 auto 3.5rem auto' }}>
             <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0284C7', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -145,7 +145,7 @@ export function LandingPage({ onNavigate }) {
       </section>
 
       {/* 4. Real-Time Inspection Process Workflow */}
-      <section id="process" style={{ padding: '5.5rem 0', backgroundColor: '#F1F5F9', borderTop: '1px solid #E2E8F0', borderBottom: '1px solid #E2E8F0' }}>
+      <section id="process" className="landing-lazy-section" style={{ padding: '5.5rem 0', backgroundColor: '#F1F5F9', borderTop: '1px solid #E2E8F0', borderBottom: '1px solid #E2E8F0' }}>
         <div className="container">
           <div style={{ textAlign: 'center', maxWidth: '720px', margin: '0 auto 3.5rem auto' }}>
             <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#4338CA', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -205,7 +205,7 @@ export function LandingPage({ onNavigate }) {
       </section>
 
       {/* 5. Why Choose Us & Conflict-Free QA */}
-      <section id="about" style={{ padding: '5.5rem 0', backgroundColor: '#FFFFFF' }}>
+      <section id="about" className="landing-lazy-section" style={{ padding: '5.5rem 0', backgroundColor: '#FFFFFF' }}>
         <div className="container">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '3.5rem', alignItems: 'center' }}>
             <div>
@@ -233,7 +233,7 @@ export function LandingPage({ onNavigate }) {
               </div>
 
               <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                <button onClick={() => onNavigate('register')} className="btn btn-primary btn-lg">
+                <button onClick={() => onNavigate('register')} className="btn btn-primary btn-lg" aria-label="Register as Buyer (USA)">
                   Register as Buyer (USA)
                 </button>
                 <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="btn btn-success btn-lg">
@@ -288,7 +288,7 @@ export function LandingPage({ onNavigate }) {
       </section>
 
       {/* 6. Contact & Direct Mill Booking Section */}
-      <section id="contact" style={{ padding: '5.5rem 0', backgroundColor: '#0F172A', color: '#FFFFFF' }}>
+      <section id="contact" className="landing-lazy-section" style={{ padding: '5.5rem 0', backgroundColor: '#0F172A', color: '#FFFFFF' }}>
         <div className="container">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '3.5rem' }}>
             <div>
@@ -348,6 +348,7 @@ export function LandingPage({ onNavigate }) {
                 <button
                   onClick={() => onNavigate('register')}
                   className="btn btn-accent btn-lg"
+                  aria-label="Create Client Account (USA)"
                   style={{ width: '100%', justifyContent: 'center', gap: '0.6rem' }}
                 >
                   <UserPlus size={18} />
@@ -357,6 +358,7 @@ export function LandingPage({ onNavigate }) {
                 <button
                   onClick={() => onNavigate('login')}
                   className="btn btn-outline btn-lg"
+                  aria-label="Sign In to Portal"
                   style={{ width: '100%', justifyContent: 'center', color: '#FFFFFF', borderColor: '#475569', backgroundColor: '#0F172A', gap: '0.6rem' }}
                 >
                   <LogIn size={18} />

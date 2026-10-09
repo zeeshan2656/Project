@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
-import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 
 const SocketContext = createContext(null);
@@ -25,56 +24,77 @@ export function SocketProvider({ children }) {
   };
 
   useEffect(() => {
-    // Initialize socket connection
-    const socketInstance = io('/', {
-      transports: ['websocket', 'polling'],
-      reconnectionAttempts: 10,
-      reconnectionDelay: 1000
-    });
-
-    socketInstance.on('connect', () => {
-      console.log('Connected to WebSocket server:', socketInstance.id);
-      if (user?.role) {
-        socketInstance.emit('join_role_room', user.role);
+    // Only connect WebSocket for authenticated users (admin, customer, inspector)
+    if (!user) {
+      if (socket) {
+        socket.disconnect();
+        setSocket(null);
       }
-      if (user?.id) {
-        socketInstance.emit('join_user_room', user.id);
-      }
+      return;
+    }
+
+    let isMounted = true;
+    let socketInstance = null;
+
+    // Lazy load socket.io-client on-demand so landing page loads instantly without it
+    import('socket.io-client').then(({ io }) => {
+      if (!isMounted) return;
+
+      socketInstance = io('/', {
+        transports: ['websocket', 'polling'],
+        reconnectionAttempts: 10,
+        reconnectionDelay: 1000
+      });
+
+      socketInstance.on('connect', () => {
+        console.log('Connected to WebSocket server:', socketInstance.id);
+        if (user?.role) {
+          socketInstance.emit('join_role_room', user.role);
+        }
+        if (user?.id) {
+          socketInstance.emit('join_user_room', user.id);
+        }
+      });
+
+      // Real-time inspection status change
+      socketInstance.on('inspection:status_changed', (data) => {
+        console.log('Live inspection status change received:', data);
+        setLiveEvents(prev => [data, ...prev.slice(0, 49)]);
+
+        // Notify registered listeners
+        const cbs = listenersRef.current.get('inspection:status_changed') || [];
+        cbs.forEach(cb => cb(data));
+      });
+
+      // Real-time order created
+      socketInstance.on('order:created', (data) => {
+        console.log('Live order created received:', data);
+        setLiveEvents(prev => [data, ...prev.slice(0, 49)]);
+
+        const cbs = listenersRef.current.get('order:created') || [];
+        cbs.forEach(cb => cb(data));
+      });
+
+      // Admin direct notification
+      socketInstance.on('admin:notification', (data) => {
+        addToast(data.message, 'admin', 'Live Operations Alert');
+      });
+
+      // Employee direct notification
+      socketInstance.on('employee:notification', (data) => {
+        addToast(data.message, 'employee', 'Task Notification');
+      });
+
+      setSocket(socketInstance);
+    }).catch(err => {
+      console.warn('[WebSocket] Dynamic import error:', err);
     });
-
-    // Real-time inspection status change
-    socketInstance.on('inspection:status_changed', (data) => {
-      console.log('Live inspection status change received:', data);
-      setLiveEvents(prev => [data, ...prev.slice(0, 49)]);
-
-      // Notify registered listeners
-      const cbs = listenersRef.current.get('inspection:status_changed') || [];
-      cbs.forEach(cb => cb(data));
-    });
-
-    // Real-time order created
-    socketInstance.on('order:created', (data) => {
-      console.log('Live order created received:', data);
-      setLiveEvents(prev => [data, ...prev.slice(0, 49)]);
-
-      const cbs = listenersRef.current.get('order:created') || [];
-      cbs.forEach(cb => cb(data));
-    });
-
-    // Admin direct notification
-    socketInstance.on('admin:notification', (data) => {
-      addToast(data.message, 'admin', 'Live Operations Alert');
-    });
-
-    // Employee direct notification
-    socketInstance.on('employee:notification', (data) => {
-      addToast(data.message, 'employee', 'Task Notification');
-    });
-
-    setSocket(socketInstance);
 
     return () => {
-      socketInstance.disconnect();
+      isMounted = false;
+      if (socketInstance) {
+        socketInstance.disconnect();
+      }
     };
   }, [user]);
 
