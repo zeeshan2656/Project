@@ -1,5 +1,8 @@
+const fs = require('fs');
+const path = require('path');
 const { query, transaction, pool } = require('../config/db');
 const { broadcastInspectionStatus } = require('../services/socket');
+const { MEDIA_ROOT } = require('../config/media');
 
 function parseJSON(val, fallback = null) {
   if (!val) return fallback;
@@ -961,6 +964,52 @@ async function uploadPhoto(req, res) {
 }
 
 /**
+ * Delete photo evidence (used when a defect finding is removed).
+ * Only removes photos belonging to this inspection sheet; removes DB rows and files on disk.
+ */
+async function deletePhotos(req, res) {
+  try {
+    const { id } = req.params;
+    const urls = Array.isArray(req.body?.photo_urls) ? req.body.photo_urls.filter(u => typeof u === 'string') : [];
+    if (urls.length === 0) {
+      return res.json({ success: true, deleted: 0 });
+    }
+
+    if (req.user && req.user.role === 'employee') {
+      const sheetRows = await query('SELECT status FROM inspection_sheets WHERE id = ?', [id]);
+      if (sheetRows.length > 0 && (sheetRows[0].status === 'Submitted' || sheetRows[0].status === 'Approved')) {
+        return res.status(403).json({ success: false, message: 'This inspection is locked in read-only mode.' });
+      }
+    }
+
+    let deleted = 0;
+    for (const url of urls) {
+      if (!url.startsWith('/media/inspections/')) continue;
+      const rows = await query('SELECT id FROM inspection_photos WHERE sheet_id = ? AND photo_url = ?', [id, url]);
+      if (rows.length === 0) continue;
+
+      await query('DELETE FROM inspection_photos WHERE sheet_id = ? AND photo_url = ?', [id, url]);
+      deleted += rows.length;
+
+      // Remove file only if no other record still references it
+      const stillUsed = await query('SELECT id FROM inspection_photos WHERE photo_url = ? LIMIT 1', [url]);
+      if (stillUsed.length === 0) {
+        const dir = path.join(MEDIA_ROOT, 'inspections');
+        const filePath = path.resolve(dir, path.basename(url));
+        if (filePath.startsWith(path.resolve(dir)) && fs.existsSync(filePath)) {
+          try { fs.unlinkSync(filePath); } catch (e) { console.warn('Could not delete photo file:', e.message); }
+        }
+      }
+    }
+
+    return res.json({ success: true, deleted });
+  } catch (err) {
+    console.error('Error deleting photos:', err);
+    return res.status(500).json({ success: false, message: 'Failed to delete photos.' });
+  }
+}
+
+/**
  * Admin: Delete Inspection Sheet
  * Cascades to child photos, field values, and audit logs.
  * Synchronizes parent order status cleanly: resets to 'Unassigned' if no remaining sheets,
@@ -1019,6 +1068,7 @@ module.exports = {
   submitInspection,
   reviewInspection,
   uploadPhoto,
+  deletePhotos,
   deleteInspection
 };
 

@@ -227,11 +227,19 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
   };
 
   const handleRemoveFindingPhoto = (defectIdx, photoIdx) => {
-    const updated = [...defectFindings];
-    if (Array.isArray(updated[defectIdx]?.images)) {
-      updated[defectIdx].images = updated[defectIdx].images.filter((_, i) => i !== photoIdx);
-      setDefectFindings(updated);
+    const finding = defectFindings[defectIdx];
+    if (!finding || !Array.isArray(finding.images)) return;
+    const removedUrl = finding.images[photoIdx];
+    if (removedUrl) {
+      inspectionsApi.deletePhotos(sheetId, [removedUrl]).catch(err => {
+        console.warn('Failed to delete photo:', err);
+      });
     }
+    setDefectFindings(prev => prev.map((f, i) =>
+      i === defectIdx
+        ? { ...f, images: (Array.isArray(f.images) ? f.images : []).filter((_, k) => k !== photoIdx) }
+        : f
+    ));
   };
 
   // Update Defect Finding counts
@@ -289,6 +297,13 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
   };
 
   const handleRemoveFinding = (index) => {
+    const removed = defectFindings[index];
+    const imageUrls = Array.isArray(removed?.images) ? removed.images.filter(Boolean) : [];
+    if (imageUrls.length > 0) {
+      inspectionsApi.deletePhotos(sheetId, imageUrls).catch(err => {
+        console.warn('Failed to delete defect photos:', err);
+      });
+    }
     setDefectFindings(defectFindings.filter((_, i) => i !== index));
     if (activeDefectCardIdx === index) {
       setActiveDefectCardIdx(null);
@@ -332,12 +347,13 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
 
         const res = await inspectionsApi.uploadPhoto(sheetId, formData);
         if (res.success && res.photo?.photo_url) {
-          setDefectFindings(prevFindings => {
-            const updated = [...prevFindings];
-            if (!Array.isArray(updated[index].images)) updated[index].images = [];
-            updated[index].images.push(res.photo.photo_url);
-            return updated;
-          });
+          const newUrl = res.photo.photo_url;
+          setDefectFindings(prevFindings => prevFindings.map((f, i) => {
+            if (i !== index) return f;
+            const existing = Array.isArray(f.images) ? f.images : [];
+            if (existing.includes(newUrl)) return f;
+            return { ...f, images: [...existing, newUrl] };
+          }));
         }
       }
     } catch (err) {
@@ -920,13 +936,41 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
                     <td style={{ padding: '0.4rem 0.6rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                         {Array.isArray(finding.images) && finding.images.map((imgUrl, imgI) => (
-                          <img
-                            key={imgI}
-                            src={imgUrl}
-                            alt="Evidence"
-                            onClick={() => onOpenPhoto && onOpenPhoto(imgUrl)}
-                            style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', cursor: 'pointer', border: '1px solid #CBD5E1' }}
-                          />
+                          <div key={imgI} style={{ position: 'relative', display: 'inline-flex' }}>
+                            <img
+                              src={imgUrl}
+                              alt="Evidence"
+                              onClick={() => onOpenPhoto && onOpenPhoto(imgUrl)}
+                              style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', cursor: 'pointer', border: '1px solid #CBD5E1' }}
+                            />
+                            {!isReadOnly && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFindingPhoto(idx, imgI)}
+                                title="Remove photo"
+                                style={{
+                                  position: 'absolute',
+                                  top: '-6px',
+                                  right: '-6px',
+                                  backgroundColor: '#DC2626',
+                                  color: '#FFFFFF',
+                                  border: 'none',
+                                  borderRadius: '50%',
+                                  width: '15px',
+                                  height: '15px',
+                                  fontSize: '10px',
+                                  lineHeight: 1,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  cursor: 'pointer',
+                                  padding: 0
+                                }}
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
                         ))}
                         {!isReadOnly && (
                           <>

@@ -2,35 +2,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Flexible media root resolution (works across local Windows dev and Hostinger/Linux production)
-const possibleMediaDirs = [
-  process.env.MEDIA_DIR && path.resolve(process.env.MEDIA_DIR),
-  path.resolve(__dirname, '../../../media'), // project/media (Hostinger repo root / production)
-  path.resolve(__dirname, '../../../../media'), // awais new/media (local root)
-  path.resolve(__dirname, '../../media')
-].filter(Boolean);
-
-let MEDIA_ROOT = possibleMediaDirs.find(d => fs.existsSync(d)) || path.resolve(__dirname, '../../../media');
-
-try {
-  if (!fs.existsSync(MEDIA_ROOT)) {
-    fs.mkdirSync(MEDIA_ROOT, { recursive: true });
-  }
-} catch (err) {
-  console.warn('Could not create MEDIA_ROOT:', err.message);
-}
-
-// Ensure root and subdirectories exist
-['inspections', 'slider', 'branding'].forEach(sub => {
-  try {
-    const dir = path.join(MEDIA_ROOT, sub);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-  } catch (err) {
-    console.warn(`Could not create ${sub} dir:`, err.message);
-  }
-});
+const { MEDIA_ROOT, MEDIA_DIR } = require('../config/media');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

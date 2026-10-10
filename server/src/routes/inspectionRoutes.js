@@ -9,6 +9,7 @@ const {
   submitInspection,
   reviewInspection,
   uploadPhoto,
+  deletePhotos,
   deleteInspection
 } = require('../controllers/inspectionController');
 const { authenticate, requireRole } = require('../middleware/auth');
@@ -36,6 +37,7 @@ router.post('/:id/submit', authenticate, requireRole(['employee', 'admin']), sub
 
 // 4. Upload photo evidence
 router.post('/:id/photos', authenticate, requireRole(['employee', 'admin']), upload.single('photo'), convertToWebp, uploadPhoto);
+router.delete('/:id/photos', authenticate, requireRole(['employee', 'admin']), deletePhotos);
 
 // Admin Review & Approval
 router.post('/:id/review', authenticate, requireRole(['admin']), reviewInspection);

@@ -91,6 +91,7 @@ export const inspectionsApi = {
   submitInspection: (id, payload) => apiRequest(`/inspections/${id}/submit`, { method: 'POST', body: JSON.stringify(payload) }),
   reviewInspection: (id, payload) => apiRequest(`/inspections/${id}/review`, { method: 'POST', body: JSON.stringify(payload) }),
   uploadPhoto: (id, formData) => apiRequest(`/inspections/${id}/photos`, { method: 'POST', body: formData }),
+  deletePhotos: (id, photoUrls) => apiRequest(`/inspections/${id}/photos`, { method: 'DELETE', body: JSON.stringify({ photo_urls: photoUrls }) }),
   deleteInspection: (id) => apiRequest(`/inspections/${id}`, { method: 'DELETE' })
 };
 
