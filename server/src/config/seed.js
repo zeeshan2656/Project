@@ -145,11 +145,20 @@ async function seedDatabase() {
     const [adminCheck] = await pool.query('SELECT id FROM users WHERE email = ?', ['admin@apexfabric.com']);
     let adminId;
     if (adminCheck.length === 0) {
-      const [res] = await pool.query(
-        `INSERT INTO users (role, name, email, password_hash, phone, status)
-         VALUES ('admin', 'Farhan Qureshi (QA Director)', 'admin@apexfabric.com', ?, '+92 300 8472910', 'active')`,
-        [adminPass]
-      );
+      let res;
+      try {
+        [res] = await pool.query(
+          `INSERT INTO users (role, name, email, password_hash, plain_password, phone, status)
+           VALUES ('admin', 'Farhan Qureshi (QA Director)', 'admin@apexfabric.com', ?, 'admin123', '+92 300 8472910', 'active')`,
+          [adminPass]
+        );
+      } catch (_) {
+        [res] = await pool.query(
+          `INSERT INTO users (role, name, email, password_hash, phone, status)
+           VALUES ('admin', 'Farhan Qureshi (QA Director)', 'admin@apexfabric.com', ?, '+92 300 8472910', 'active')`,
+          [adminPass]
+        );
+      }
       adminId = res.insertId;
       console.log('✓ Seeded Admin User: admin@apexfabric.com / admin123');
     } else {
@@ -160,11 +169,20 @@ async function seedDatabase() {
     const [cust1Check] = await pool.query('SELECT id FROM users WHERE email = ?', ['john@usafashionbrands.com']);
     let cust1Id;
     if (cust1Check.length === 0) {
-      const [res] = await pool.query(
-        `INSERT INTO users (role, name, email, password_hash, company_name, city, country, phone, status)
-         VALUES ('customer', 'Johnathan Miller', 'john@usafashionbrands.com', ?, 'Pacific Apparel Sourcing LLC', 'Los Angeles, CA', 'USA', '+1 213 555 0194', 'active')`,
-        [customerPass]
-      );
+      let res;
+      try {
+        [res] = await pool.query(
+          `INSERT INTO users (role, name, email, password_hash, plain_password, company_name, city, country, phone, status)
+           VALUES ('customer', 'Johnathan Miller', 'john@usafashionbrands.com', ?, 'customer123', 'Pacific Apparel Sourcing LLC', 'Los Angeles, CA', 'USA', '+1 213 555 0194', 'active')`,
+          [customerPass]
+        );
+      } catch (_) {
+        [res] = await pool.query(
+          `INSERT INTO users (role, name, email, password_hash, company_name, city, country, phone, status)
+           VALUES ('customer', 'Johnathan Miller', 'john@usafashionbrands.com', ?, 'Pacific Apparel Sourcing LLC', 'Los Angeles, CA', 'USA', '+1 213 555 0194', 'active')`,
+          [customerPass]
+        );
+      }
       cust1Id = res.insertId;
       console.log('✓ Seeded Customer 1: john@usafashionbrands.com / customer123');
     } else {
@@ -174,11 +192,20 @@ async function seedDatabase() {
     const [cust2Check] = await pool.query('SELECT id FROM users WHERE email = ?', ['sarah@manhattangarments.com']);
     let cust2Id;
     if (cust2Check.length === 0) {
-      const [res] = await pool.query(
-        `INSERT INTO users (role, name, email, password_hash, company_name, city, country, phone, status)
-         VALUES ('customer', 'Sarah Jenkins', 'sarah@manhattangarments.com', ?, 'Manhattan Garment Imports Inc.', 'New York, NY', 'USA', '+1 212 555 8392', 'active')`,
-        [customerPass]
-      );
+      let res;
+      try {
+        [res] = await pool.query(
+          `INSERT INTO users (role, name, email, password_hash, plain_password, company_name, city, country, phone, status)
+           VALUES ('customer', 'Sarah Jenkins', 'sarah@manhattangarments.com', ?, 'customer123', 'Manhattan Garment Imports Inc.', 'New York, NY', 'USA', '+1 212 555 8392', 'active')`,
+          [customerPass]
+        );
+      } catch (_) {
+        [res] = await pool.query(
+          `INSERT INTO users (role, name, email, password_hash, company_name, city, country, phone, status)
+           VALUES ('customer', 'Sarah Jenkins', 'sarah@manhattangarments.com', ?, 'Manhattan Garment Imports Inc.', 'New York, NY', 'USA', '+1 212 555 8392', 'active')`,
+          [customerPass]
+        );
+      }
       cust2Id = res.insertId;
       console.log('✓ Seeded Customer 2: sarah@manhattangarments.com / customer123');
     } else {
@@ -212,13 +239,22 @@ async function seedDatabase() {
 
     const employeeMap = {};
     for (const emp of employeesData) {
-      const [check] = await pool.query('SELECT id FROM users WHERE employee_code = ?', [emp.code]);
+      const [check] = await pool.query('SELECT id FROM users WHERE employee_code = ? OR email = ?', [emp.code, emp.email]);
       if (check.length === 0) {
-        const [res] = await pool.query(
-          `INSERT INTO users (role, name, email, password_hash, employee_code, city, country, phone, status)
-           VALUES ('employee', ?, ?, ?, ?, ?, 'Pakistan', ?, 'active')`,
-          [emp.name, emp.email, empPass, emp.code, emp.city, emp.phone]
-        );
+        let res;
+        try {
+          [res] = await pool.query(
+            `INSERT INTO users (role, name, email, password_hash, plain_password, employee_code, city, country, phone, status)
+             VALUES ('employee', ?, ?, ?, 'emp123', ?, ?, 'Pakistan', ?, 'active')`,
+            [emp.name, emp.email, empPass, emp.code, emp.city, emp.phone]
+          );
+        } catch (_) {
+          [res] = await pool.query(
+            `INSERT INTO users (role, name, email, password_hash, employee_code, city, country, phone, status)
+             VALUES ('employee', ?, ?, ?, ?, ?, 'Pakistan', ?, 'active')`,
+            [emp.name, emp.email, empPass, emp.code, emp.city, emp.phone]
+          );
+        }
         employeeMap[emp.code] = res.insertId;
         console.log(`✓ Seeded Employee: ${emp.name} (${emp.code}) / emp123`);
       } else {
@@ -829,9 +865,16 @@ async function seedDatabase() {
     console.log('--- Database Seeding Complete! ---');
   } catch (error) {
     console.error('Seeding error:', error);
-  } finally {
-    process.exit(0);
   }
 }
 
-seedDatabase();
+module.exports = { seedDatabase };
+
+if (require.main === module) {
+  seedDatabase()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
+}

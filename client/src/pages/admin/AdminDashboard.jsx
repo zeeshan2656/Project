@@ -150,7 +150,8 @@ export function AdminDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen, on
     {
       id: 'templates',
       label: 'Inspection Templates',
-      icon: Layers
+      icon: Layers,
+      badge: metrics.templateCount
     },
     {
       id: 'customers',

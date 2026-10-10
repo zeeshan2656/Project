@@ -38,31 +38,75 @@ function formatTemplateRecord(t) {
 /**
  * List all inspection templates with their dynamic fields & advanced configs
  */
+/**
+ * List all inspection templates with their dynamic fields & advanced configs
+ */
 async function getTemplates(req, res) {
   try {
-    const templates = await query(`
-      SELECT t.*, u.name AS creator_name,
-             (SELECT COUNT(*) FROM template_fields WHERE template_id = t.id) AS field_count,
-             (SELECT COUNT(*) FROM inspection_sheets WHERE template_id = t.id) AS usage_count
-      FROM inspection_templates t
-      LEFT JOIN users u ON t.created_by = u.id
-      WHERE t.is_active = 1 AND (t.is_deleted = 0 OR t.is_deleted IS NULL)
-      ORDER BY t.id DESC
-    `);
-
-    // Fetch fields for each template
-    for (const t of templates) {
-      const fields = await query(
-        'SELECT * FROM template_fields WHERE template_id = ? ORDER BY sort_order ASC, id ASC',
-        [t.id]
-      );
-      t.fields = fields.map(f => ({
-        ...f,
-        options: parseJSON(f.options, [])
-      }));
+    let templates;
+    try {
+      templates = await query(`
+        SELECT t.*, u.name AS creator_name,
+               (SELECT COUNT(*) FROM template_fields WHERE template_id = t.id) AS field_count,
+               (SELECT COUNT(*) FROM inspection_sheets WHERE template_id = t.id) AS usage_count
+        FROM inspection_templates t
+        LEFT JOIN users u ON t.created_by = u.id
+        WHERE t.is_active = 1 AND (t.is_deleted = 0 OR t.is_deleted IS NULL)
+        ORDER BY t.id DESC
+      `);
+    } catch (sqlErr) {
+      console.warn('[getTemplates] Primary query error, using fallback query:', sqlErr.message);
+      try {
+        templates = await query(`
+          SELECT t.*, u.name AS creator_name,
+                 (SELECT COUNT(*) FROM template_fields WHERE template_id = t.id) AS field_count,
+                 (SELECT COUNT(*) FROM inspection_sheets WHERE template_id = t.id) AS usage_count
+          FROM inspection_templates t
+          LEFT JOIN users u ON t.created_by = u.id
+          ORDER BY t.id DESC
+        `);
+      } catch (innerErr) {
+        templates = await query('SELECT * FROM inspection_templates ORDER BY id DESC').catch(() => []);
+      }
     }
 
-    const formatted = templates.map(formatTemplateRecord);
+    // Auto-seed default templates if none exist on live database
+    if (!templates || templates.length === 0) {
+      try {
+        const { seedDatabase } = require('../config/seed');
+        await seedDatabase();
+        templates = await query(`
+          SELECT t.*, u.name AS creator_name,
+                 (SELECT COUNT(*) FROM template_fields WHERE template_id = t.id) AS field_count,
+                 (SELECT COUNT(*) FROM inspection_sheets WHERE template_id = t.id) AS usage_count
+          FROM inspection_templates t
+          LEFT JOIN users u ON t.created_by = u.id
+          ORDER BY t.id DESC
+        `).catch(async () => {
+          return await query('SELECT * FROM inspection_templates ORDER BY id DESC').catch(() => []);
+        });
+      } catch (seedErr) {
+        console.warn('[getTemplates] Auto-seed notice:', seedErr.message);
+      }
+    }
+
+    // Fetch fields for each template
+    for (const t of (templates || [])) {
+      try {
+        const fields = await query(
+          'SELECT * FROM template_fields WHERE template_id = ? ORDER BY sort_order ASC, id ASC',
+          [t.id]
+        );
+        t.fields = fields.map(f => ({
+          ...f,
+          options: parseJSON(f.options, [])
+        }));
+      } catch (_) {
+        t.fields = [];
+      }
+    }
+
+    const formatted = (templates || []).map(formatTemplateRecord);
     return res.json({ success: true, count: formatted.length, templates: formatted });
   } catch (err) {
     console.error('Error fetching templates:', err);

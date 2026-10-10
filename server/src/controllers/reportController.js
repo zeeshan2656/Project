@@ -2023,15 +2023,30 @@ async function exportOrdersExcel(req, res) {
  */
 async function getDashboardMetrics(req, res) {
   try {
-    const rows = await query(`
-      SELECT 
-        (SELECT COUNT(*) FROM orders) AS totalOrders,
-        (SELECT COUNT(*) FROM inspection_sheets WHERE status IN ('In Progress', 'Draft Saved', 'Not Started', 'Needs Re-inspection', 'Draft')) AS activeAudits,
-        (SELECT COUNT(*) FROM inspection_sheets WHERE status = 'Submitted') AS submittedQueue,
-        (SELECT COUNT(*) FROM inspection_sheets WHERE status = 'Approved') AS approvedCount,
-        (SELECT COUNT(*) FROM users WHERE role = 'customer') AS customerCount,
-        (SELECT COUNT(*) FROM users WHERE role = 'employee') AS employeeCount
-    `);
+    let rows;
+    try {
+      rows = await query(`
+        SELECT 
+          (SELECT COUNT(*) FROM orders WHERE is_deleted = 0 OR is_deleted IS NULL) AS totalOrders,
+          (SELECT COUNT(*) FROM inspection_sheets WHERE status IN ('In Progress', 'Draft Saved', 'Not Started', 'Needs Re-inspection', 'Draft')) AS activeAudits,
+          (SELECT COUNT(*) FROM inspection_sheets WHERE status = 'Submitted') AS submittedQueue,
+          (SELECT COUNT(*) FROM inspection_sheets WHERE status = 'Approved') AS approvedCount,
+          (SELECT COUNT(*) FROM users WHERE role = 'customer' AND (is_deleted = 0 OR is_deleted IS NULL)) AS customerCount,
+          (SELECT COUNT(*) FROM users WHERE role = 'employee' AND (is_deleted = 0 OR is_deleted IS NULL)) AS employeeCount,
+          (SELECT COUNT(*) FROM inspection_templates WHERE is_active = 1 AND (is_deleted = 0 OR is_deleted IS NULL)) AS templateCount
+      `);
+    } catch (_) {
+      rows = await query(`
+        SELECT 
+          (SELECT COUNT(*) FROM orders) AS totalOrders,
+          (SELECT COUNT(*) FROM inspection_sheets WHERE status IN ('In Progress', 'Draft Saved', 'Not Started', 'Needs Re-inspection', 'Draft')) AS activeAudits,
+          (SELECT COUNT(*) FROM inspection_sheets WHERE status = 'Submitted') AS submittedQueue,
+          (SELECT COUNT(*) FROM inspection_sheets WHERE status = 'Approved') AS approvedCount,
+          (SELECT COUNT(*) FROM users WHERE role = 'customer') AS customerCount,
+          (SELECT COUNT(*) FROM users WHERE role = 'employee') AS employeeCount,
+          (SELECT COUNT(*) FROM inspection_templates) AS templateCount
+      `);
+    }
 
     const metrics = rows[0] || {
       totalOrders: 0,
@@ -2039,7 +2054,8 @@ async function getDashboardMetrics(req, res) {
       submittedQueue: 0,
       approvedCount: 0,
       customerCount: 0,
-      employeeCount: 0
+      employeeCount: 0,
+      templateCount: 0
     };
 
     return res.json({
@@ -2050,7 +2066,8 @@ async function getDashboardMetrics(req, res) {
         submittedQueue: parseInt(metrics.submittedQueue || 0, 10),
         approvedCount: parseInt(metrics.approvedCount || 0, 10),
         customerCount: parseInt(metrics.customerCount || 0, 10),
-        employeeCount: parseInt(metrics.employeeCount || 0, 10)
+        employeeCount: parseInt(metrics.employeeCount || 0, 10),
+        templateCount: parseInt(metrics.templateCount || 0, 10)
       }
     });
   } catch (err) {

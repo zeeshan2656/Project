@@ -497,6 +497,28 @@ export function TemplateBuilder() {
 
       {/* Templates List Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '1.5rem' }}>
+        {templates.length === 0 && !loading && (
+          <div className="card" style={{ gridColumn: '1 / -1', padding: '3.5rem 1.5rem', textAlign: 'center', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px dashed #CBD5E1' }}>
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
+              <Layers size={28} color="#64748B" />
+            </div>
+            <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1E293B', marginBottom: '0.4rem' }}>
+              No Inspection Protocols Found
+            </h4>
+            <p style={{ fontSize: '0.85rem', color: '#64748B', maxWidth: '440px', margin: '0 auto 1.5rem auto' }}>
+              No inspection templates are currently detected. Click "Refresh" or build a new dynamic inspection protocol.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <button onClick={fetchTemplates} className="btn btn-outline btn-sm">
+                <RefreshCw size={14} /> Refresh
+              </button>
+              <button onClick={() => { resetForm(); setShowModal(true); }} className="btn btn-primary btn-sm">
+                <Plus size={14} /> Create New Template
+              </button>
+            </div>
+          </div>
+        )}
+
         {templates.map((tmpl) => (
           <div key={tmpl.id} className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div>

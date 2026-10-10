@@ -139,14 +139,23 @@ app.use((err, req, res, next) => {
   });
 });
 
+const { runAutoMigrations } = require('./config/migrate');
+
 const PORT = parseInt(process.env.PORT || '5000', 10);
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`====================================================`);
   console.log(`🚀 Fabrication Audit Backend running on port ${PORT}`);
   console.log(`📡 WebSocket real-time gateway initialized`);
   console.log(`📁 Media directory: ${MEDIA_DIR}`);
   console.log(`====================================================`);
+
+  // Run automatic non-destructive schema migrations on boot
+  try {
+    await runAutoMigrations();
+  } catch (err) {
+    console.error('[Boot Warning] Auto-migration encountered an error:', err.message);
+  }
 });
 
 // Graceful shutdown

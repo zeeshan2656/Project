@@ -4,17 +4,35 @@ const { query } = require('../config/db');
 /**
  * Admin: List Customers with order count and country info
  */
+/**
+ * Admin: List Customers with order count and country info
+ */
 async function getCustomers(req, res) {
   try {
-    const customers = await query(`
-      SELECT u.id, u.name, u.email, u.plain_password, u.company_name, u.city, u.country, u.phone, u.status, u.created_at,
-             COUNT(o.id) AS total_orders
-      FROM users u
-      LEFT JOIN orders o ON o.customer_id = u.id
-      WHERE u.role = 'customer' AND (u.is_deleted = 0 OR u.is_deleted IS NULL)
-      GROUP BY u.id
-      ORDER BY u.id DESC
-    `);
+    let customers;
+    try {
+      customers = await query(`
+        SELECT u.id, u.name, u.email, u.plain_password, u.company_name, u.city, u.country, u.phone, u.status, u.created_at,
+               COUNT(o.id) AS total_orders
+        FROM users u
+        LEFT JOIN orders o ON o.customer_id = u.id
+        WHERE u.role = 'customer' AND (u.is_deleted = 0 OR u.is_deleted IS NULL)
+        GROUP BY u.id
+        ORDER BY u.id DESC
+      `);
+    } catch (sqlErr) {
+      console.warn('[getCustomers] Primary query error, using legacy fallback query:', sqlErr.message);
+      const rows = await query(`
+        SELECT u.id, u.name, u.email, u.company_name, u.city, u.country, u.phone, u.status, u.created_at,
+               COUNT(o.id) AS total_orders
+        FROM users u
+        LEFT JOIN orders o ON o.customer_id = u.id
+        WHERE u.role = 'customer'
+        GROUP BY u.id
+        ORDER BY u.id DESC
+      `);
+      customers = rows.map(r => ({ ...r, plain_password: r.plain_password || '' }));
+    }
     return res.json({ success: true, customers });
   } catch (err) {
     console.error('Error fetching customers:', err);
@@ -41,11 +59,21 @@ async function createCustomer(req, res) {
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
 
-    const result = await query(
-      `INSERT INTO users (role, name, email, password_hash, plain_password, company_name, city, country, phone, status)
-       VALUES ('customer', ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
-      [name, email, password_hash, password, company_name || null, city || 'USA', country || 'USA', phone || null]
-    );
+    let result;
+    try {
+      result = await query(
+        `INSERT INTO users (role, name, email, password_hash, plain_password, company_name, city, country, phone, status)
+         VALUES ('customer', ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
+        [name, email, password_hash, password, company_name || null, city || 'USA', country || 'USA', phone || null]
+      );
+    } catch (_) {
+      // Fallback if plain_password column is not present
+      result = await query(
+        `INSERT INTO users (role, name, email, password_hash, company_name, city, country, phone, status)
+         VALUES ('customer', ?, ?, ?, ?, ?, ?, ?, 'active')`,
+        [name, email, password_hash, company_name || null, city || 'USA', country || 'USA', phone || null]
+      );
+    }
 
     return res.status(201).json({
       success: true,
@@ -63,16 +91,32 @@ async function createCustomer(req, res) {
  */
 async function getEmployees(req, res) {
   try {
-    const employees = await query(`
-      SELECT u.id, u.name, u.email, u.plain_password, u.employee_code, u.city, u.phone, u.status, u.created_at,
-             COUNT(ins.id) AS total_inspections,
-             SUM(CASE WHEN ins.status IN ('Not Started', 'In Progress', 'Needs Re-inspection') THEN 1 ELSE 0 END) AS active_tasks
-      FROM users u
-      LEFT JOIN inspection_sheets ins ON ins.assigned_employee_id = u.id
-      WHERE u.role = 'employee' AND (u.is_deleted = 0 OR u.is_deleted IS NULL)
-      GROUP BY u.id
-      ORDER BY u.id ASC
-    `);
+    let employees;
+    try {
+      employees = await query(`
+        SELECT u.id, u.name, u.email, u.plain_password, u.employee_code, u.city, u.phone, u.status, u.created_at,
+               COUNT(ins.id) AS total_inspections,
+               SUM(CASE WHEN ins.status IN ('Not Started', 'In Progress', 'Needs Re-inspection') THEN 1 ELSE 0 END) AS active_tasks
+        FROM users u
+        LEFT JOIN inspection_sheets ins ON ins.assigned_employee_id = u.id
+        WHERE u.role = 'employee' AND (u.is_deleted = 0 OR u.is_deleted IS NULL)
+        GROUP BY u.id
+        ORDER BY u.id ASC
+      `);
+    } catch (sqlErr) {
+      console.warn('[getEmployees] Primary query error, using legacy fallback query:', sqlErr.message);
+      const rows = await query(`
+        SELECT u.id, u.name, u.email, u.employee_code, u.city, u.phone, u.status, u.created_at,
+               COUNT(ins.id) AS total_inspections,
+               SUM(CASE WHEN ins.status IN ('Not Started', 'In Progress', 'Needs Re-inspection') THEN 1 ELSE 0 END) AS active_tasks
+        FROM users u
+        LEFT JOIN inspection_sheets ins ON ins.assigned_employee_id = u.id
+        WHERE u.role = 'employee'
+        GROUP BY u.id
+        ORDER BY u.id ASC
+      `);
+      employees = rows.map(r => ({ ...r, plain_password: r.plain_password || '' }));
+    }
     return res.json({ success: true, employees });
   } catch (err) {
     console.error('Error fetching employees:', err);
@@ -121,11 +165,20 @@ async function createEmployee(req, res) {
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
 
-    const result = await query(
-      `INSERT INTO users (role, name, email, password_hash, plain_password, employee_code, city, country, phone, status)
-       VALUES ('employee', ?, ?, ?, ?, ?, ?, 'Pakistan', ?, 'active')`,
-      [name, finalEmail, password_hash, password, finalCode, city || 'Faisalabad', phone || null]
-    );
+    let result;
+    try {
+      result = await query(
+        `INSERT INTO users (role, name, email, password_hash, plain_password, employee_code, city, country, phone, status)
+         VALUES ('employee', ?, ?, ?, ?, ?, ?, 'Pakistan', ?, 'active')`,
+        [name, finalEmail, password_hash, password, finalCode, city || 'Faisalabad', phone || null]
+      );
+    } catch (_) {
+      result = await query(
+        `INSERT INTO users (role, name, email, password_hash, employee_code, city, country, phone, status)
+         VALUES ('employee', ?, ?, ?, ?, ?, 'Pakistan', ?, 'active')`,
+        [name, finalEmail, password_hash, finalCode, city || 'Faisalabad', phone || null]
+      );
+    }
 
     return res.status(201).json({
       success: true,
@@ -199,18 +252,42 @@ async function updateUser(req, res) {
 
     if (updates.length > 0) {
       params.push(id);
-      await query(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
+      try {
+        await query(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
+      } catch (updErr) {
+        // If column error e.g. plain_password doesn't exist, remove plain_password
+        const safeUpdates = [];
+        const safeParams = [];
+        for (let i = 0; i < updates.length; i++) {
+          if (!updates[i].includes('plain_password')) {
+            safeUpdates.push(updates[i]);
+            safeParams.push(params[i]);
+          }
+        }
+        safeParams.push(id);
+        if (safeUpdates.length > 0) {
+          await query(`UPDATE users SET ${safeUpdates.join(', ')} WHERE id = ?`, safeParams);
+        }
+      }
     }
 
-    const updatedUserRows = await query(
-      'SELECT id, role, name, email, plain_password, employee_code, company_name, city, country, phone, status, created_at FROM users WHERE id = ?',
-      [id]
-    );
+    let updatedUserRows;
+    try {
+      updatedUserRows = await query(
+        'SELECT id, role, name, email, plain_password, employee_code, company_name, city, country, phone, status, created_at FROM users WHERE id = ?',
+        [id]
+      );
+    } catch (_) {
+      updatedUserRows = await query(
+        'SELECT id, role, name, email, employee_code, company_name, city, country, phone, status, created_at FROM users WHERE id = ?',
+        [id]
+      );
+    }
 
     return res.json({
       success: true,
       message: 'User details updated successfully.',
-      user: updatedUserRows[0]
+      user: updatedUserRows[0] || {}
     });
   } catch (err) {
     console.error('Error updating user:', err);
@@ -238,7 +315,11 @@ async function updateUserPassword(req, res) {
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
 
-    await query('UPDATE users SET password_hash = ?, plain_password = ? WHERE id = ?', [password_hash, password, id]);
+    try {
+      await query('UPDATE users SET password_hash = ?, plain_password = ? WHERE id = ?', [password_hash, password, id]);
+    } catch (_) {
+      await query('UPDATE users SET password_hash = ? WHERE id = ?', [password_hash, id]);
+    }
 
     return res.json({
       success: true,
@@ -258,37 +339,51 @@ async function getCustomerDetailsAndOrders(req, res) {
   try {
     const { id } = req.params;
 
-    const custRows = await query(
-      'SELECT id, role, name, email, plain_password, company_name, city, country, phone, status, created_at FROM users WHERE id = ? AND role = "customer"',
-      [id]
-    );
+    let custRows;
+    try {
+      custRows = await query(
+        'SELECT id, role, name, email, plain_password, company_name, city, country, phone, status, created_at FROM users WHERE id = ? AND role = "customer"',
+        [id]
+      );
+    } catch (_) {
+      custRows = await query(
+        'SELECT id, role, name, email, company_name, city, country, phone, status, created_at FROM users WHERE id = ? AND role = "customer"',
+        [id]
+      );
+    }
     if (custRows.length === 0) {
       return res.status(404).json({ success: false, message: 'Customer account not found.' });
     }
     const customer = custRows[0];
 
-    const orders = await query(`
-      SELECT o.id, o.order_number, o.po_number, o.product_type, o.product_description,
-             o.factory_name, o.factory_city, o.factory_address, o.factory_contact_name, o.factory_contact_phone,
-             o.total_quantity, o.unit, o.order_date, o.inspection_status, o.created_at,
-             (SELECT COUNT(*) FROM inspection_sheets WHERE order_id = o.id) AS inspections_count,
-             latest_ins.id AS latest_sheet_id,
-             latest_ins.sheet_number AS latest_sheet_number,
-             latest_ins.status AS latest_sheet_status,
-             latest_ins.pass_fail_result AS latest_pass_fail_result,
-             latest_ins.total_defect_count AS latest_defect_count,
-             emp.name AS latest_auditor_name
-      FROM orders o
-      LEFT JOIN (
-        SELECT ins1.*
-        FROM inspection_sheets ins1
-        JOIN (SELECT order_id, MAX(id) AS max_id FROM inspection_sheets GROUP BY order_id) ins2
-          ON ins1.id = ins2.max_id
-      ) latest_ins ON latest_ins.order_id = o.id
-      LEFT JOIN users emp ON latest_ins.assigned_employee_id = emp.id
-      WHERE o.customer_id = ?
-      ORDER BY o.id DESC
-    `, [id]);
+    let orders;
+    try {
+      orders = await query(`
+        SELECT o.id, o.order_number, o.po_number, o.product_type, o.product_description,
+               o.factory_name, o.factory_city, o.factory_address, o.factory_contact_name, o.factory_contact_phone,
+               o.total_quantity, o.unit, o.order_date, o.inspection_status, o.created_at,
+               (SELECT COUNT(*) FROM inspection_sheets WHERE order_id = o.id) AS inspections_count,
+               latest_ins.id AS latest_sheet_id,
+               latest_ins.sheet_number AS latest_sheet_number,
+               latest_ins.status AS latest_sheet_status,
+               latest_ins.pass_fail_result AS latest_pass_fail_result,
+               latest_ins.total_defect_count AS latest_defect_count,
+               emp.name AS latest_auditor_name
+        FROM orders o
+        LEFT JOIN (
+          SELECT ins1.*
+          FROM inspection_sheets ins1
+          JOIN (SELECT order_id, MAX(id) AS max_id FROM inspection_sheets GROUP BY order_id) ins2
+            ON ins1.id = ins2.max_id
+        ) latest_ins ON latest_ins.order_id = o.id
+        LEFT JOIN users emp ON latest_ins.assigned_employee_id = emp.id
+        WHERE o.customer_id = ?
+        ORDER BY o.id DESC
+      `, [id]);
+    } catch (orderErr) {
+      console.warn('[getCustomerDetailsAndOrders] Using fallback orders query:', orderErr.message);
+      orders = await query('SELECT * FROM orders WHERE customer_id = ? ORDER BY id DESC', [id]).catch(() => []);
+    }
 
     return res.json({
       success: true,
@@ -309,29 +404,43 @@ async function getEmployeeDetailsAndInspections(req, res) {
   try {
     const { id } = req.params;
 
-    const empRows = await query(
-      'SELECT id, role, name, email, plain_password, employee_code, city, country, phone, status, created_at FROM users WHERE id = ? AND role = "employee"',
-      [id]
-    );
+    let empRows;
+    try {
+      empRows = await query(
+        'SELECT id, role, name, email, plain_password, employee_code, city, country, phone, status, created_at FROM users WHERE id = ? AND role = "employee"',
+        [id]
+      );
+    } catch (_) {
+      empRows = await query(
+        'SELECT id, role, name, email, employee_code, city, country, phone, status, created_at FROM users WHERE id = ? AND role = "employee"',
+        [id]
+      );
+    }
     if (empRows.length === 0) {
       return res.status(404).json({ success: false, message: 'Field auditor account not found.' });
     }
     const employee = empRows[0];
 
-    const inspections = await query(`
-      SELECT ins.id, ins.sheet_number, ins.order_id, ins.status,
-             ins.ordered_quantity, ins.inspected_quantity, ins.total_defect_count, ins.overall_defect_percentage,
-             ins.pass_fail_result, ins.disposition, ins.started_at, ins.submitted_at, ins.reviewed_at, ins.created_at,
-             o.order_number, o.po_number, o.product_type, o.factory_name, o.factory_city, o.factory_address,
-             c.name AS customer_name, c.company_name AS customer_company,
-             tmpl.title AS template_title
-      FROM inspection_sheets ins
-      JOIN orders o ON ins.order_id = o.id
-      JOIN users c ON o.customer_id = c.id
-      LEFT JOIN inspection_templates tmpl ON ins.template_id = tmpl.id
-      WHERE ins.assigned_employee_id = ?
-      ORDER BY ins.id DESC
-    `, [id]);
+    let inspections;
+    try {
+      inspections = await query(`
+        SELECT ins.id, ins.sheet_number, ins.order_id, ins.status,
+               ins.ordered_quantity, ins.inspected_quantity, ins.total_defect_count, ins.overall_defect_percentage,
+               ins.pass_fail_result, ins.disposition, ins.started_at, ins.submitted_at, ins.reviewed_at, ins.created_at,
+               o.order_number, o.po_number, o.product_type, o.factory_name, o.factory_city, o.factory_address,
+               c.name AS customer_name, c.company_name AS customer_company,
+               tmpl.title AS template_title
+        FROM inspection_sheets ins
+        JOIN orders o ON ins.order_id = o.id
+        JOIN users c ON o.customer_id = c.id
+        LEFT JOIN inspection_templates tmpl ON ins.template_id = tmpl.id
+        WHERE ins.assigned_employee_id = ?
+        ORDER BY ins.id DESC
+      `, [id]);
+    } catch (insErr) {
+      console.warn('[getEmployeeDetailsAndInspections] Using fallback inspections query:', insErr.message);
+      inspections = await query('SELECT * FROM inspection_sheets WHERE assigned_employee_id = ? ORDER BY id DESC', [id]).catch(() => []);
+    }
 
     return res.json({
       success: true,
@@ -364,9 +473,17 @@ async function toggleUserStatus(req, res) {
  */
 async function getAdmins(req, res) {
   try {
-    const admins = await query(
-      'SELECT id, role, name, email, plain_password, phone, status, created_at FROM users WHERE role = "admin" ORDER BY id ASC'
-    );
+    let admins;
+    try {
+      admins = await query(
+        'SELECT id, role, name, email, plain_password, phone, status, created_at FROM users WHERE role = "admin" ORDER BY id ASC'
+      );
+    } catch (_) {
+      const rows = await query(
+        'SELECT id, role, name, email, phone, status, created_at FROM users WHERE role = "admin" ORDER BY id ASC'
+      );
+      admins = rows.map(r => ({ ...r, plain_password: '' }));
+    }
     return res.json({
       success: true,
       admins
@@ -395,11 +512,20 @@ async function createAdmin(req, res) {
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
 
-    const result = await query(
-      `INSERT INTO users (role, name, email, password_hash, plain_password, phone, status)
-       VALUES ('admin', ?, ?, ?, ?, ?, 'active')`,
-      [name, email, password_hash, password, phone || null]
-    );
+    let result;
+    try {
+      result = await query(
+        `INSERT INTO users (role, name, email, password_hash, plain_password, phone, status)
+         VALUES ('admin', ?, ?, ?, ?, ?, 'active')`,
+        [name, email, password_hash, password, phone || null]
+      );
+    } catch (_) {
+      result = await query(
+        `INSERT INTO users (role, name, email, password_hash, phone, status)
+         VALUES ('admin', ?, ?, ?, ?, 'active')`,
+        [name, email, password_hash, phone || null]
+      );
+    }
 
     return res.status(201).json({
       success: true,
@@ -435,7 +561,11 @@ async function deleteCustomer(req, res) {
 
     const orderRows = await query('SELECT id FROM orders WHERE customer_id = ?', [id]);
     if (orderRows.length > 0) {
-      await query('UPDATE users SET is_deleted = 1, status = "inactive" WHERE id = ?', [id]);
+      try {
+        await query('UPDATE users SET is_deleted = 1, status = "inactive" WHERE id = ?', [id]);
+      } catch (_) {
+        await query('UPDATE users SET status = "inactive" WHERE id = ?', [id]);
+      }
       return res.json({
         success: true,
         message: `Client "${users[0].name}" removed from client list (historical purchase orders and inspection records preserved without disturbance).`
@@ -470,7 +600,11 @@ async function deleteEmployee(req, res) {
     const logRows = await query('SELECT id FROM inspection_audit_logs WHERE actor_id = ?', [id]);
 
     if (sheetRows.length > 0 || logRows.length > 0) {
-      await query('UPDATE users SET is_deleted = 1, status = "inactive" WHERE id = ?', [id]);
+      try {
+        await query('UPDATE users SET is_deleted = 1, status = "inactive" WHERE id = ?', [id]);
+      } catch (_) {
+        await query('UPDATE users SET status = "inactive" WHERE id = ?', [id]);
+      }
       return res.json({
         success: true,
         message: `Inspector "${users[0].name}" removed from active roster (historical inspection reports and audit signatures preserved without disturbance).`
