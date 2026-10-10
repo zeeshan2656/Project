@@ -46,9 +46,8 @@ function emitEvent(eventName, payload, targetRooms = []) {
   if (!io) return;
 
   if (targetRooms.length > 0) {
-    targetRooms.forEach(room => {
-      io.to(room).emit(eventName, payload);
-    });
+    // Pass array of target rooms directly so Socket.IO deduplicates across rooms automatically
+    io.to(targetRooms).emit(eventName, payload);
   } else {
     // Broadcast to all connected clients
     io.emit(eventName, payload);
@@ -73,12 +72,15 @@ function broadcastInspectionStatus(inspectionData, action, actorName) {
     data: payload
   }, ['role_admin']);
 
+  // Employee notification: ONLY target the specific assigned employee room (never role_employee)
+  // This prevents notifying unrelated inspectors and avoids sending duplicate packets to multiple rooms.
   if (inspectionData.assigned_employee_id) {
     emitEvent('employee:notification', {
       type: 'task_update',
       message: `Inspection ${inspectionData.sheet_number} updated: ${inspectionData.status}`,
-      data: payload
-    }, [`user_${inspectionData.assigned_employee_id}`, 'role_employee']);
+      data: payload,
+      actorName
+    }, [`user_${inspectionData.assigned_employee_id}`]);
   }
 }
 

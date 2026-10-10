@@ -19,7 +19,8 @@ import {
   Clock,
   CheckCircle,
   AlertTriangle,
-  Trash2
+  Trash2,
+  X
 } from 'lucide-react';
 
 export function InspectionManagement({ onOpenPhoto }) {
@@ -38,6 +39,7 @@ export function InspectionManagement({ onOpenPhoto }) {
   const [orders, setOrders] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [loadingDependencies, setLoadingDependencies] = useState(false);
   const [assignForm, setAssignForm] = useState({
     order_id: '',
     template_id: '',
@@ -107,6 +109,7 @@ export function InspectionManagement({ onOpenPhoto }) {
   const handleOpenAssignModal = async () => {
     setAssignError('');
     setShowAssignModal(true);
+    setLoadingDependencies(true);
     try {
       const [ordersRes, tmplRes, empRes] = await Promise.all([
         ordersApi.getOrders(),
@@ -114,28 +117,31 @@ export function InspectionManagement({ onOpenPhoto }) {
         usersApi.getEmployees()
       ]);
 
-      if (ordersRes.success) setOrders(ordersRes.orders);
-      if (tmplRes.success) setTemplates(tmplRes.templates);
-      if (empRes.success) setEmployees(empRes.employees);
+      const fetchedOrders = (ordersRes?.success && Array.isArray(ordersRes.orders)) ? ordersRes.orders : [];
+      const fetchedTemplates = (tmplRes?.success && Array.isArray(tmplRes.templates)) ? tmplRes.templates : [];
+      const fetchedEmployees = (empRes?.success && Array.isArray(empRes.employees)) ? empRes.employees : [];
 
-      if (ordersRes.orders?.length > 0) {
-        setAssignForm(prev => ({ ...prev, order_id: ordersRes.orders[0].id }));
-      }
-      if (tmplRes.templates?.length > 0) {
-        setAssignForm(prev => ({ ...prev, template_id: tmplRes.templates[0].id }));
-      }
-      if (empRes.employees?.length > 0) {
-        setAssignForm(prev => ({ ...prev, assigned_employee_id: empRes.employees[0].id }));
-      }
+      setOrders(fetchedOrders);
+      setTemplates(fetchedTemplates);
+      setEmployees(fetchedEmployees);
+
+      setAssignForm(prev => ({
+        order_id: prev.order_id || (fetchedOrders[0]?.id ? String(fetchedOrders[0].id) : ''),
+        template_id: prev.template_id || (fetchedTemplates[0]?.id ? String(fetchedTemplates[0].id) : ''),
+        assigned_employee_id: prev.assigned_employee_id || (fetchedEmployees[0]?.id ? String(fetchedEmployees[0].id) : '')
+      }));
     } catch (err) {
       console.error('Failed to load assign dependencies:', err);
+      setAssignError('Failed to load order, template, or inspector options. Please try again.');
+    } finally {
+      setLoadingDependencies(false);
     }
   };
 
   const handleCreateInspection = async (e) => {
     e.preventDefault();
     if (!assignForm.order_id || !assignForm.template_id || !assignForm.assigned_employee_id) {
-      setAssignError('Please select Order, Template, and Assigned Field Inspector.');
+      setAssignError('Please select Order, Protocol Template, and Assigned Field Inspector.');
       return;
     }
 
@@ -145,7 +151,10 @@ export function InspectionManagement({ onOpenPhoto }) {
       const res = await inspectionsApi.createInspection(assignForm);
       if (res.success) {
         setShowAssignModal(false);
+        setAssignForm({ order_id: '', template_id: '', assigned_employee_id: '' });
         fetchInspections();
+      } else {
+        setAssignError(res.message || 'Failed to assign inspection.');
       }
     } catch (err) {
       setAssignError(err.message || 'Failed to assign inspection.');
@@ -464,82 +473,178 @@ export function InspectionManagement({ onOpenPhoto }) {
       {/* Assign Sheet from Template Modal */}
       {showAssignModal && (
         <div className="modal-overlay" onClick={() => setShowAssignModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '780px', width: '92vw' }}>
-            <div className="modal-header">
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800 }}>
-                Generate &amp; Assign Inspection Sheet
-              </h3>
-              <button onClick={() => setShowAssignModal(false)} style={{ background: 'transparent', border: 'none', color: '#64748B', cursor: 'pointer' }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '820px', width: '94vw', maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="modal-header" style={{ borderBottom: '1px solid #E2E8F0', paddingBottom: '1rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Plus size={20} color="#0284C7" />
+                  Generate &amp; Assign Inspection Sheet
+                </h3>
+                <p style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '0.2rem' }}>
+                  Select target Purchase Order, Inspection Protocol Template, and Pakistan Field Inspector.
+                </p>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setShowAssignModal(false)} 
+                style={{ background: 'transparent', border: 'none', color: '#64748B', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
+                title="Close"
+              >
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateInspection}>
-              <div className="modal-body">
+            <form onSubmit={handleCreateInspection} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+              <div className="modal-body" style={{ overflowY: 'auto', padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 {assignError && (
-                  <div style={{ backgroundColor: '#FEE2E2', borderLeft: '4px solid #DC2626', color: '#991B1B', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.85rem' }}>
+                  <div style={{ backgroundColor: '#FEE2E2', borderLeft: '4px solid #DC2626', color: '#991B1B', padding: '0.75rem 1rem', borderRadius: '4px', fontSize: '0.85rem' }}>
                     {assignError}
                   </div>
                 )}
 
-                <div className="form-group">
-                  <label className="form-label">Select Target Order / PO *</label>
-                  <select
-                    value={assignForm.order_id}
-                    onChange={(e) => setAssignForm({ ...assignForm, order_id: e.target.value })}
-                    className="form-select"
-                    required
-                  >
-                    <option value="">-- Choose Order --</option>
-                    {orders.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.order_number} ({o.po_number}) - {o.factory_name} ({o.factory_city}) [{o.total_quantity} {o.unit}]
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {loadingDependencies ? (
+                  <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748B' }}>
+                    <RefreshCw size={24} className="live-pulse" style={{ margin: '0 auto 0.75rem auto' }} />
+                    <p style={{ fontSize: '0.9rem', fontWeight: 600 }}>Loading available Orders, Templates, and Field Inspectors...</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* 1. Target Order / PO */}
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label" style={{ fontWeight: 700, fontSize: '0.85rem', color: '#1E293B', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>1. Target Purchase Order / Contract *</span>
+                        <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>({orders.length} available)</span>
+                      </label>
+                      <select
+                        value={assignForm.order_id}
+                        onChange={(e) => setAssignForm({ ...assignForm, order_id: e.target.value })}
+                        className="form-select"
+                        required
+                        style={{ fontSize: '0.9rem', padding: '0.65rem 0.85rem' }}
+                      >
+                        <option value="">-- Choose Target Order / PO --</option>
+                        {orders.map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.order_number} (PO: {o.po_number}) — {o.factory_name} ({o.factory_city}) [{o.total_quantity?.toLocaleString()} {o.unit}] • {o.product_type}
+                          </option>
+                        ))}
+                      </select>
+                      {orders.length === 0 && (
+                        <p style={{ fontSize: '0.75rem', color: '#DC2626', marginTop: '4px' }}>
+                          No orders found. Please create a purchase order first.
+                        </p>
+                      )}
+                    </div>
 
-                <div className="form-group">
-                  <label className="form-label">Select Inspection Protocol Template *</label>
-                  <select
-                    value={assignForm.template_id}
-                    onChange={(e) => setAssignForm({ ...assignForm, template_id: e.target.value })}
-                    className="form-select"
-                    required
-                  >
-                    <option value="">-- Choose Template --</option>
-                    {templates.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.title} ({t.product_type})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    {/* 2. Inspection Protocol Template */}
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label" style={{ fontWeight: 700, fontSize: '0.85rem', color: '#1E293B', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>2. Inspection Protocol &amp; AQL Template *</span>
+                        <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>({templates.length} protocols)</span>
+                      </label>
+                      <select
+                        value={assignForm.template_id}
+                        onChange={(e) => setAssignForm({ ...assignForm, template_id: e.target.value })}
+                        className="form-select"
+                        required
+                        style={{ fontSize: '0.9rem', padding: '0.65rem 0.85rem' }}
+                      >
+                        <option value="">-- Choose Protocol Template --</option>
+                        {templates.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.title} — Category: {t.product_type}
+                          </option>
+                        ))}
+                      </select>
+                      {templates.length === 0 && (
+                        <p style={{ fontSize: '0.75rem', color: '#DC2626', marginTop: '4px' }}>
+                          No inspection templates found. Please create a template in Template Management.
+                        </p>
+                      )}
+                    </div>
 
-                <div className="form-group">
-                  <label className="form-label">Assign Field Inspector (Pakistan) *</label>
-                  <select
-                    value={assignForm.assigned_employee_id}
-                    onChange={(e) => setAssignForm({ ...assignForm, assigned_employee_id: e.target.value })}
-                    className="form-select"
-                    required
-                  >
-                    <option value="">-- Choose Field Auditor --</option>
-                    {employees.map((emp) => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.name} ({emp.employee_code}) - Stationed in {emp.city} [{emp.active_tasks || 0} active audits]
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    {/* 3. Stationed Field Inspector */}
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label" style={{ fontWeight: 700, fontSize: '0.85rem', color: '#1E293B', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>3. Stationed Field Inspector (Pakistan) *</span>
+                        <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>({employees.length} field auditors)</span>
+                      </label>
+                      <select
+                        value={assignForm.assigned_employee_id}
+                        onChange={(e) => setAssignForm({ ...assignForm, assigned_employee_id: e.target.value })}
+                        className="form-select"
+                        required
+                        style={{ fontSize: '0.9rem', padding: '0.65rem 0.85rem' }}
+                      >
+                        <option value="">-- Choose Field Auditor --</option>
+                        {employees.map((emp) => (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.name} ({emp.employee_code}) — Stationed in {emp.city} [{emp.active_tasks || 0} active audits]
+                          </option>
+                        ))}
+                      </select>
+                      {employees.length === 0 && (
+                        <p style={{ fontSize: '0.75rem', color: '#DC2626', marginTop: '4px' }}>
+                          No field inspectors registered. Please create an inspector in User Management.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Live Assignment Summary Card */}
+                    {assignForm.order_id && assignForm.template_id && assignForm.assigned_employee_id && (
+                      <div style={{ backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: '8px', padding: '1rem', marginTop: '0.5rem' }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#0369A1', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <CheckCircle size={14} color="#0284C7" /> Verified Assignment Summary
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', fontSize: '0.8rem' }}>
+                          <div>
+                            <span style={{ color: '#64748B', display: 'block' }}>Target Mill / Location:</span>
+                            <strong style={{ color: '#0F172A' }}>
+                              {orders.find(o => String(o.id) === String(assignForm.order_id))?.factory_name || 'Selected Order'}
+                              {' '}({orders.find(o => String(o.id) === String(assignForm.order_id))?.factory_city || ''})
+                            </strong>
+                          </div>
+                          <div>
+                            <span style={{ color: '#64748B', display: 'block' }}>Inspection Protocol:</span>
+                            <strong style={{ color: '#0F172A' }}>
+                              {templates.find(t => String(t.id) === String(assignForm.template_id))?.title || 'Selected Protocol'}
+                            </strong>
+                          </div>
+                          <div>
+                            <span style={{ color: '#64748B', display: 'block' }}>Assigned Inspector:</span>
+                            <strong style={{ color: '#0F172A' }}>
+                              {employees.find(e => String(e.id) === String(assignForm.assigned_employee_id))?.name || 'Selected Auditor'}
+                              {' '}({employees.find(e => String(e.id) === String(assignForm.assigned_employee_id))?.employee_code || ''})
+                            </strong>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
-              <div className="modal-footer">
+              <div className="modal-footer" style={{ borderTop: '1px solid #E2E8F0', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
                 <button type="button" onClick={() => setShowAssignModal(false)} className="btn btn-outline">
                   Cancel
                 </button>
-                <button type="submit" disabled={assigning} className="btn btn-primary">
-                  {assigning ? 'Assigning...' : 'Generate Sheet & Dispatch'}
+                <button 
+                  type="submit" 
+                  disabled={assigning || loadingDependencies || !assignForm.order_id || !assignForm.template_id || !assignForm.assigned_employee_id} 
+                  className="btn btn-primary"
+                  style={{ fontWeight: 700, minWidth: '180px', justifyContent: 'center' }}
+                >
+                  {assigning ? (
+                    <>
+                      <RefreshCw size={15} className="live-pulse" />
+                      <span>Generating Sheet...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={16} />
+                      <span>Generate Sheet &amp; Dispatch</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

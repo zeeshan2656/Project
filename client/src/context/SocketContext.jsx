@@ -9,14 +9,26 @@ export function SocketProvider({ children }) {
   const [toasts, setToasts] = useState([]);
   const [liveEvents, setLiveEvents] = useState([]);
   const listenersRef = useRef(new Map());
+  const recentToastsRef = useRef(new Map());
 
-  // Show a toast message with automatic dismissal
+  // Show a toast message with automatic deduplication & dismissal
   const addToast = (message, type = 'info', title = 'Live Notification') => {
+    if (!message) return;
+    const now = Date.now();
+    const dedupeKey = `${title}:${message}`;
+    const lastTime = recentToastsRef.current.get(dedupeKey) || 0;
+    // Prevent duplicate toast storms within 4 seconds
+    if (now - lastTime < 4000) {
+      return;
+    }
+    recentToastsRef.current.set(dedupeKey, now);
+
     const id = Date.now() + Math.random();
-    setToasts(prev => [...prev, { id, title, message, type, time: new Date() }]);
+    // Keep at most 2 previous toasts visible so they do not stack excessively
+    setToasts(prev => [...prev.slice(-2), { id, title, message, type, time: new Date() }]);
     setTimeout(() => {
       removeToast(id);
-    }, 5500);
+    }, 5000);
   };
 
   const removeToast = (id) => {
@@ -80,8 +92,12 @@ export function SocketProvider({ children }) {
         addToast(data.message, 'admin', 'Live Operations Alert');
       });
 
-      // Employee direct notification
+      // Employee direct notification (suppress self-notification to avoid spamming the current user)
       socketInstance.on('employee:notification', (data) => {
+        if (data.actorName && user?.name && data.actorName === user.name) {
+          // Current user already performed this action and has direct UI feedback
+          return;
+        }
         addToast(data.message, 'employee', 'Task Notification');
       });
 

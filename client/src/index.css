@@ -1060,17 +1060,17 @@ main {
 /* Role-Specific Dashboard Background Themes & Pages */
 .dashboard-container.admin-dashboard-theme,
 .dashboard-main.admin-dashboard-theme {
-  background-color: #EEF2F6;
+  background-color: #F4F6F9;
 }
 
 .dashboard-container.customer-dashboard-theme,
 .dashboard-main.customer-dashboard-theme {
-  background-color: #F0F6FA;
+  background-color: #EEF4F8;
 }
 
 .dashboard-container.employee-dashboard-theme,
 .dashboard-main.employee-dashboard-theme {
-  background-color: #F1F7F4;
+  background-color: #F1F5F3;
 }
 
 .dashboard-sidebar {

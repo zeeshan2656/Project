@@ -129,7 +129,7 @@ export function EmployeeDashboard({ onOpenPhoto, onNavigate, isMobileDrawerOpen,
 
   if (activeSheetId) {
     return (
-      <div style={{ width: '100%', padding: '1.25rem 2rem 5rem 2rem' }}>
+      <div className="dashboard-container employee-dashboard-theme" style={{ minHeight: 'calc(100vh - 72px)', width: '100%', padding: '1.5rem 2rem 5rem 2rem', boxSizing: 'border-box' }}>
         <InspectionSheetRunner
           sheetId={activeSheetId}
           onBack={() => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { inspectionsApi, defectsApi, reportApi } from '../../services/api';
 import { compressImage } from '../../utils/imageCompressor';
 import { openPdfViewer } from '../../components/PdfReportViewerModal';
@@ -106,6 +106,7 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
 
   const [savingDraft, setSavingDraft] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const hasStartedRef = useRef(false);
 
   // Load inspection and defect library
   const loadInspection = async () => {
@@ -153,8 +154,9 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
           })));
         }
 
-        // Trigger 'In Progress' status when opened
-        if (s.status === 'Not Started' || s.status === 'Needs Re-inspection') {
+        // Trigger 'In Progress' status when opened (guard against React double-render / mount)
+        if ((s.status === 'Not Started' || s.status === 'Needs Re-inspection') && !hasStartedRef.current) {
+          hasStartedRef.current = true;
           await inspectionsApi.startInspection(sheetId);
         }
       }
@@ -166,6 +168,7 @@ export function InspectionSheetRunner({ sheetId, onBack, onOpenPhoto }) {
   };
 
   useEffect(() => {
+    hasStartedRef.current = false;
     loadInspection();
   }, [sheetId]);
 
